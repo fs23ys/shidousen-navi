@@ -1,0 +1,19 @@
+{
+  "name": "shidousen-navi",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy:rules": "firebase deploy --only firestore:rules"
+  },
+  "dependencies": {
+    "firebase": "^11.0.0",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  }
+}

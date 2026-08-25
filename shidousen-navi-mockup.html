@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>指導せんナビ — モックアップ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FBF5E7;
+    --paper-deep:#F3EAD3;
+    --card:#FFFCF4;
+    --ink:#332E28;
+    --ink-soft:#7A7266;
+    --ink-faint:#A79E8E;
+    --line:#EEE4CE;
+    --line-strong:#DDCFAF;
+    --sage:#6FAE94;
+    --sage-deep:#4F8D77;
+    --sage-tint:#DCF3E7;
+    --amber:#E0A86E;
+    --amber-tint:#FBEBD8;
+    --clay:#E39B9B;
+    --clay-tint:#FBE5E5;
+    --pastel-yellow:#D9B84F;
+    --pastel-yellow-tint:#FBF3D8;
+    --danger:#D97878;
+    --radius-card:14px;
+    --radius-sm:8px;
+    --shadow-card:0 1px 2px rgba(90,70,40,0.07), 0 6px 16px rgba(90,70,40,0.06);
+    --shadow-pop:0 12px 32px rgba(70,50,20,0.16);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Noto Sans JP',sans-serif;
+    font-size:15px;
+    line-height:1.6;
+    min-height:100vh;
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(90,70,40,0.05) 1px, transparent 0);
+    background-size:22px 22px;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .display{font-family:'Zen Kaku Gothic New',sans-serif;}
+  button{font-family:inherit;cursor:pointer;}
+  input,select,textarea{font-family:inherit;}
+  :focus-visible{outline:2.5px solid var(--sage); outline-offset:2px; border-radius:4px;}
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; transition-duration:0.001ms !important;}
+  }
+
+  /* ---------- LOCK SCREEN ---------- */
+  #lockScreen{
+    position:fixed; inset:0; z-index:100;
+    background:var(--sage-deep);
+    display:flex; align-items:center; justify-content:center;
+    padding:24px;
+  }
+  #lockScreen.hidden{display:none;}
+  .lock-card{
+    background:var(--card);
+    border-radius:var(--radius-card);
+    padding:40px 36px;
+    width:100%; max-width:380px;
+    box-shadow:var(--shadow-pop);
+    text-align:center;
+  }
+  .lock-badge{
+    width:52px;height:52px;border-radius:50%;
+    background:var(--sage-tint); color:var(--sage-deep);
+    display:flex;align-items:center;justify-content:center;
+    margin:0 auto 18px; font-size:22px;
+  }
+  .lock-card h1{font-size:19px; margin:0 0 6px; font-weight:700;}
+  .lock-card p.sub{color:var(--ink-soft); font-size:13.5px; margin:0 0 22px;}
+  .lock-card input[type=password]{
+    width:100%; padding:12px 14px; border-radius:var(--radius-sm);
+    border:1.5px solid var(--line-strong); font-size:15px; margin-bottom:14px;
+    background:var(--paper);
+  }
+  .btn-primary{
+    width:100%; background:var(--sage); color:#fff; border:none;
+    padding:12px 14px; border-radius:var(--radius-sm); font-size:14.5px;
+    font-weight:600; letter-spacing:.01em;
+  }
+  .btn-primary:hover{background:var(--sage-deep);}
+  .lock-skip{
+    display:block; margin-top:16px; font-size:12.5px; color:var(--ink-faint);
+    background:none; border:none; text-decoration:underline; text-underline-offset:3px;
+  }
+
+  /* ---------- HEADER ---------- */
+  header{
+    padding:20px 28px;
+    display:flex; align-items:center; justify-content:space-between;
+    border-bottom:1.5px solid var(--line);
+    background:var(--paper);
+    position:sticky; top:0; z-index:20;
+    flex-wrap:wrap; gap:10px;
+  }
+  .brand{display:flex; align-items:center; gap:12px;}
+  .brand-mark{
+    width:38px;height:38px;border-radius:9px;
+    background:var(--sage); color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Zen Kaku Gothic New',sans-serif; font-weight:900; font-size:15px;
+    letter-spacing:-0.02em;
+  }
+  .brand-name{font-family:'Zen Kaku Gothic New',sans-serif; font-weight:900; font-size:18px;}
+  .brand-sub{font-size:11.5px; color:var(--ink-faint); margin-top:1px;}
+  .header-right{display:flex; align-items:center; gap:14px;}
+  .lock-status{
+    display:flex; align-items:center; gap:6px;
+    font-size:12px; color:var(--sage-deep); background:var(--sage-tint);
+    padding:6px 12px; border-radius:99px; font-weight:600;
+  }
+  main{max-width:1080px; margin:0 auto; padding:32px 28px 80px;}
+
+  /* ---------- SEARCH ---------- */
+  .search-zone{position:relative; margin-bottom:8px;}
+  .search-label{
+    font-size:12px; color:var(--ink-faint); font-weight:600;
+    letter-spacing:.04em; margin-bottom:8px; display:block;
+  }
+  .search-box{
+    display:flex; align-items:center; gap:10px;
+    background:var(--card); border:2px solid var(--line-strong);
+    border-radius:var(--radius-card); padding:6px 8px 6px 18px;
+    box-shadow:var(--shadow-card);
+    transition:border-color .15s;
+  }
+  .search-box:focus-within{border-color:var(--sage);}
+  .search-box svg{flex-shrink:0; color:var(--ink-faint);}
+  #drugInput{
+    flex:1; border:none; outline:none; background:transparent;
+    font-size:17px; padding:12px 0; color:var(--ink);
+    font-family:'Zen Kaku Gothic New',sans-serif; font-weight:500;
+  }
+  #drugInput::placeholder{color:var(--ink-faint); font-weight:400;}
+  .search-count{
+    font-size:11.5px; color:var(--ink-faint); padding:6px 12px;
+    border-left:1px solid var(--line); white-space:nowrap;
+  }
+  .suggest-list{
+    position:absolute; top:calc(100% + 6px); left:0; right:0;
+    background:var(--card); border:1.5px solid var(--line-strong);
+    border-radius:var(--radius-sm); box-shadow:var(--shadow-pop);
+    max-height:280px; overflow-y:auto; z-index:30; display:none;
+  }
+  .suggest-list.open{display:block;}
+  .suggest-item{
+    padding:11px 18px; display:flex; justify-content:space-between; align-items:center;
+    border-bottom:1px solid var(--line); gap:10px;
+  }
+  .suggest-item:last-child{border-bottom:none;}
+  .suggest-item:hover, .suggest-item.active{background:var(--sage-tint); cursor:pointer;}
+  .suggest-name{font-weight:600; font-size:14.5px;}
+  .suggest-meta{font-size:11.5px; color:var(--ink-faint);}
+  .suggest-count{
+    font-size:10.5px; font-family:'JetBrains Mono',monospace;
+    background:var(--paper-deep); color:var(--ink-soft);
+    padding:2px 8px; border-radius:99px; flex-shrink:0;
+  }
+  .suggest-empty{padding:22px 18px; text-align:center; color:var(--ink-faint); font-size:13px;}
+
+  /* ---------- EMPTY STATE ---------- */
+  .empty-hero{
+    margin-top:64px; text-align:center; padding:40px 20px;
+  }
+  .empty-hero .glyph{font-size:34px; margin-bottom:14px; opacity:.5;}
+  .empty-hero h2{font-family:'Zen Kaku Gothic New',sans-serif; font-size:17px; margin:0 0 8px; color:var(--ink-soft); font-weight:700;}
+  .empty-hero p{color:var(--ink-faint); font-size:13.5px; max-width:340px; margin:0 auto;}
+
+  /* ---------- SELECTED DRUG ---------- */
+  #resultZone{display:none; margin-top:30px;}
+  #resultZone.open{display:block;}
+  .selected-bar{
+    display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+    margin-bottom:22px; flex-wrap:wrap;
+    padding-bottom:16px; border-bottom:2px dashed var(--line-strong);
+  }
+  .selected-bar .eyebrow{font-size:11px; color:var(--ink-faint); font-weight:600; letter-spacing:.06em; margin-bottom:3px;}
+  .selected-bar h2{font-family:'Zen Kaku Gothic New',sans-serif; font-size:22px; margin:0; font-weight:900;}
+  .selected-bar .code{font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--ink-faint); margin-top:4px;}
+  .code-list{display:flex; gap:14px; margin-top:6px; flex-wrap:wrap;}
+  .code-list .code-item{font-size:11px; color:var(--ink-faint);}
+  .code-list .code-item .k{color:var(--ink-soft); font-weight:600; margin-right:4px;}
+
+  .cols{display:grid; grid-template-columns:1fr 1.3fr; gap:26px;}
+  @media (max-width:820px){.cols{grid-template-columns:1fr;}}
+
+  .panel-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;}
+  .panel-title{font-family:'Zen Kaku Gothic New',sans-serif; font-size:14px; font-weight:700; display:flex; align-items:center; gap:8px;}
+  .panel-title .n{
+    background:var(--ink); color:#fff; font-family:'JetBrains Mono',monospace;
+    font-size:11px; padding:1px 7px; border-radius:99px;
+  }
+  .add-link{background:none; border:none; color:var(--sage-deep); font-weight:700; font-size:12.5px; display:flex; align-items:center; gap:4px;}
+  .add-link:hover{text-decoration:underline;}
+
+  /* ---------- INDEX CARD (signature element) ---------- */
+  .res-card{
+    position:relative;
+    background:var(--card);
+    border:1.5px solid var(--line);
+    border-radius:var(--radius-card);
+    margin-bottom:12px;
+    padding:16px 16px 14px 20px;
+    box-shadow:var(--shadow-card);
+    overflow:hidden;
+  }
+  .res-card::before{
+    content:"";
+    position:absolute; left:0; top:0; bottom:0; width:7px;
+    background:var(--tab-color, var(--sage));
+  }
+  .res-card::after{
+    content:"";
+    position:absolute; top:0; left:14px; right:14px; height:0;
+    border-top:2px dotted var(--line-strong);
+  }
+  .res-top{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:6px;}
+  .res-type-chip{
+    font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600;
+    letter-spacing:.05em; padding:3px 8px; border-radius:5px;
+    color:var(--tab-color, var(--sage)); background:var(--tab-tint, var(--sage-tint));
+    flex-shrink:0; text-transform:uppercase;
+  }
+  .res-title{font-weight:700; font-size:14.5px; line-height:1.4;}
+  .res-detail{font-size:12.5px; color:var(--ink-soft); margin-top:4px; word-break:break-all;}
+  .res-detail .k{color:var(--ink-faint); margin-right:4px;}
+  .res-memo{font-size:12px; color:var(--ink-faint); margin-top:6px; font-style:italic;}
+  .res-actions{display:flex; gap:8px; margin-top:12px;}
+  .res-actions a, .res-actions button{
+    font-size:12px; font-weight:600; padding:6px 12px; border-radius:99px;
+    border:1.5px solid var(--line-strong); background:var(--paper); color:var(--ink);
+    text-decoration:none; display:inline-flex; align-items:center; gap:5px;
+  }
+  .res-actions a:hover, .res-actions button:hover{border-color:var(--sage); color:var(--sage-deep);}
+  .res-del{margin-left:auto; color:var(--ink-faint); border-color:transparent; background:none;}
+  .res-del:hover{color:var(--danger); border-color:transparent;}
+  .aud-chip{
+    font-size:10px; font-weight:700; padding:3px 8px; border-radius:5px;
+    color:var(--aud-color); background:var(--aud-tint); white-space:nowrap;
+  }
+  .audience-filter{display:flex; gap:6px; margin-bottom:14px;}
+  .audience-filter button{
+    font-size:11.5px; font-weight:600; padding:6px 12px; border-radius:99px;
+    border:1.5px solid var(--line-strong); background:var(--card); color:var(--ink-soft);
+  }
+  .audience-filter button.active{background:var(--sage); color:#fff; border-color:var(--sage);}
+
+  .empty-panel{
+    border:1.5px dashed var(--line-strong); border-radius:var(--radius-card);
+    padding:26px 18px; text-align:center; color:var(--ink-faint); font-size:12.5px;
+  }
+
+  /* ---------- SITE LIST ---------- */
+  .site-card{
+    background:var(--card); border:1.5px solid var(--line); border-radius:var(--radius-sm);
+    padding:12px 14px; margin-bottom:9px; display:flex; align-items:center; gap:10px;
+  }
+  .site-info{flex:1; min-width:0;}
+  .site-name{font-weight:600; font-size:13.5px;}
+  .site-domain{font-size:11px; color:var(--ink-faint); font-family:'JetBrains Mono',monospace;}
+  .site-go{
+    flex-shrink:0; background:var(--sage); color:#fff; border:none;
+    padding:8px 13px; border-radius:99px; font-size:12px; font-weight:700;
+    text-decoration:none; display:flex; align-items:center; gap:5px;
+  }
+  .site-go:hover{background:var(--sage-deep);}
+
+  .manage-section{margin-top:60px; padding-top:30px; border-top:1.5px solid var(--line);}
+  .manage-grid{display:grid; grid-template-columns:1fr 1fr; gap:24px;}
+  @media (max-width:820px){.manage-grid{grid-template-columns:1fr;}}
+  .backup-row{display:flex; gap:10px; flex-wrap:wrap;}
+  .manage-box{background:var(--card); border:1.5px solid var(--line); border-radius:var(--radius-card); padding:20px;}
+  .manage-box h3{font-family:'Zen Kaku Gothic New',sans-serif; font-size:14.5px; margin:0 0 4px; font-weight:700;}
+  .manage-box p.hint{font-size:12px; color:var(--ink-faint); margin:0 0 16px;}
+  .dropzone{
+    border:2px dashed var(--line-strong); border-radius:var(--radius-sm);
+    padding:22px 14px; text-align:center; color:var(--ink-faint); font-size:12.5px;
+    background:var(--paper);
+  }
+  .dropzone strong{color:var(--sage-deep); display:block; margin-bottom:4px; font-size:13px;}
+  .import-file-btn{
+    margin-top:10px; background:var(--ink); color:#fff; border:none;
+    padding:9px 16px; border-radius:99px; font-size:12.5px; font-weight:600;
+  }
+  .req-badge{
+    font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:700;
+    background:var(--sage-tint); color:var(--sage-deep); padding:2px 6px; border-radius:5px;
+    letter-spacing:.03em; vertical-align:middle;
+  }
+  .maker-badge{
+    font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:700;
+    background:var(--clay-tint); color:var(--clay); padding:2px 6px; border-radius:5px;
+    letter-spacing:.03em; vertical-align:middle;
+  }
+  .hidden-note{
+    font-size:11.5px; color:var(--ink-faint); padding:10px 4px; text-align:center;
+  }
+
+  /* ---------- MODAL ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(20,30,24,0.45);
+    display:none; align-items:center; justify-content:center; z-index:60; padding:20px;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal{
+    background:var(--card); border-radius:var(--radius-card); width:100%; max-width:460px;
+    box-shadow:var(--shadow-pop); max-height:90vh; overflow-y:auto;
+  }
+  .modal-head{padding:22px 24px 0;}
+  .modal-head h3{font-family:'Zen Kaku Gothic New',sans-serif; font-size:17px; margin:0 0 2px; font-weight:800;}
+  .modal-head p{font-size:12.5px; color:var(--ink-faint); margin:0;}
+  .modal-body{padding:18px 24px 24px;}
+  .type-tabs{display:flex; gap:6px; margin-bottom:18px; background:var(--paper-deep); padding:4px; border-radius:99px;}
+  .type-tab{
+    flex:1; text-align:center; padding:8px 6px; border-radius:99px; border:none;
+    background:transparent; font-size:12.5px; font-weight:700; color:var(--ink-soft);
+  }
+  .type-tab.active{background:var(--card); color:var(--tab-color,var(--sage)); box-shadow:0 1px 3px rgba(0,0,0,.1);}
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:12.5px; font-weight:600; margin-bottom:5px; color:var(--ink-soft);}
+  .field input, .field textarea{
+    width:100%; border:1.5px solid var(--line-strong); border-radius:var(--radius-sm);
+    padding:10px 12px; font-size:13.5px; background:var(--paper);
+  }
+  .field textarea{resize:vertical; min-height:56px;}
+  .field-row{display:flex; gap:10px;}
+  .field-row .field{flex:1;}
+  .modal-actions{display:flex; gap:10px; margin-top:20px;}
+  .modal-actions button{flex:1; padding:11px; border-radius:var(--radius-sm); font-size:13.5px; font-weight:700; border:none;}
+  .btn-cancel{background:var(--paper-deep); color:var(--ink-soft);}
+  .btn-save{background:var(--sage); color:#fff;}
+  .btn-save:hover{background:var(--sage-deep);}
+
+  .toast{
+    position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:#fff; padding:12px 22px; border-radius:99px;
+    font-size:13px; font-weight:600; opacity:0; pointer-events:none; z-index:80;
+    transition:opacity .2s, transform .2s; box-shadow:var(--shadow-pop);
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  /* ---------- FLORAL DECORATION ---------- */
+  .floral{position:absolute; pointer-events:none; z-index:0; filter:drop-shadow(0 1px 1px rgba(60,40,90,0.06));}
+  .floral-fixed{position:fixed;}
+  @media (max-width:860px){ .floral-fixed{display:none;} }
+  header{position:relative; overflow:hidden;}
+  .empty-hero{position:relative;}
+  #lockScreen .lock-card{position:relative; overflow:visible;}
+</style>
+</head>
+<body>
+
+<!-- 小さな植物画風の花モチーフ(花・茎付き花・葉・つぼみ)のシンボル定義。currentColorで色を変えて使い回す -->
+<svg width="0" height="0" style="position:absolute;overflow:hidden;">
+  <defs>
+    <symbol id="fl-flower" viewBox="0 0 40 40">
+      <g fill="currentColor" stroke="rgba(60,40,20,0.2)" stroke-width="0.7">
+        <path d="M20,20 C13,19 9,13 11,7 C17,6 22,10 22,17 C22,18 21,19 20,20 Z"/>
+        <path d="M20,20 C13,19 9,13 11,7 C17,6 22,10 22,17 C22,18 21,19 20,20 Z" transform="rotate(72 20 20)"/>
+        <path d="M20,20 C13,19 9,13 11,7 C17,6 22,10 22,17 C22,18 21,19 20,20 Z" transform="rotate(144 20 20)"/>
+        <path d="M20,20 C13,19 9,13 11,7 C17,6 22,10 22,17 C22,18 21,19 20,20 Z" transform="rotate(216 20 20)"/>
+        <path d="M20,20 C13,19 9,13 11,7 C17,6 22,10 22,17 C22,18 21,19 20,20 Z" transform="rotate(288 20 20)"/>
+      </g>
+      <circle cx="20" cy="20" r="3.4" fill="#E8A23D"/>
+      <circle cx="20" cy="20" r="3.4" fill="none" stroke="rgba(60,40,20,0.25)" stroke-width="0.5"/>
+    </symbol>
+    <symbol id="fl-flower-stem" viewBox="0 0 40 62">
+      <path d="M20,60 C19,48 21,36 20,26" fill="none" stroke="#7FA06B" stroke-width="1.4" stroke-linecap="round"/>
+      <path d="M20,42 C16,40 12,42 10,46 C13,48 17,47 20,42 Z" fill="#7FA06B" opacity="0.9"/>
+      <path d="M20,48 C24,46 28,48 30,52 C27,54 23,53 20,48 Z" fill="#8FB07A" opacity="0.9"/>
+      <use href="#fl-flower" x="0" y="0" width="40" height="40"/>
+    </symbol>
+    <!-- 細長い花びらの花(コスモス風) -->
+    <symbol id="fl-flower2" viewBox="0 0 40 40">
+      <g fill="currentColor" stroke="rgba(60,40,20,0.2)" stroke-width="0.6">
+        <path d="M20,20 C17,19 15,12 17,4 C19,3 21,3 23,4 C25,12 23,19 20,20 Z"/>
+        <path d="M20,20 C17,19 15,12 17,4 C19,3 21,3 23,4 C25,12 23,19 20,20 Z" transform="rotate(60 20 20)"/>
+        <path d="M20,20 C17,19 15,12 17,4 C19,3 21,3 23,4 C25,12 23,19 20,20 Z" transform="rotate(120 20 20)"/>
+        <path d="M20,20 C17,19 15,12 17,4 C19,3 21,3 23,4 C25,12 23,19 20,20 Z" transform="rotate(180 20 20)"/>
+        <path d="M20,20 C17,19 15,12 17,4 C19,3 21,3 23,4 C25,12 23,19 20,20 Z" transform="rotate(240 20 20)"/>
+        <path d="M20,20 C17,19 15,12 17,4 C19,3 21,3 23,4 C25,12 23,19 20,20 Z" transform="rotate(300 20 20)"/>
+      </g>
+      <circle cx="20" cy="20" r="2.6" fill="#E8A23D"/>
+    </symbol>
+    <!-- 星型の小花(梅・小花風) -->
+    <symbol id="fl-flower3" viewBox="0 0 40 40">
+      <g fill="currentColor" stroke="rgba(60,40,20,0.2)" stroke-width="0.6">
+        <ellipse cx="20" cy="10" rx="5" ry="7"/>
+        <ellipse cx="20" cy="10" rx="5" ry="7" transform="rotate(72 20 20)"/>
+        <ellipse cx="20" cy="10" rx="5" ry="7" transform="rotate(144 20 20)"/>
+        <ellipse cx="20" cy="10" rx="5" ry="7" transform="rotate(216 20 20)"/>
+        <ellipse cx="20" cy="10" rx="5" ry="7" transform="rotate(288 20 20)"/>
+      </g>
+      <circle cx="20" cy="20" r="2.8" fill="#E8A23D"/>
+    </symbol>
+    <symbol id="fl-leaf" viewBox="0 0 40 24">
+      <g fill="currentColor" stroke="rgba(40,60,30,0.18)" stroke-width="0.6">
+        <path d="M20,12 C14,7 6,7 2,12 C6,17 14,17 20,12 Z"/>
+        <path d="M20,12 C26,7 34,7 38,12 C34,17 26,17 20,12 Z"/>
+      </g>
+    </symbol>
+    <symbol id="fl-bud" viewBox="0 0 16 24">
+      <path d="M8,22 C3,18 3,6 8,2 C13,6 13,18 8,22 Z" fill="currentColor" stroke="rgba(60,40,20,0.18)" stroke-width="0.6"/>
+    </symbol>
+  </defs>
+</svg>
+
+<!-- LOCK SCREEN -->
+<div id="lockScreen">
+  <div class="lock-card">
+    <svg viewBox="0 0 40 40" class="floral" style="width:34px; height:34px; top:-14px; left:-16px; color:var(--amber); transform:rotate(-18deg);"><use href="#fl-flower2"/></svg>
+    <svg viewBox="0 0 16 24" class="floral" style="width:16px; height:24px; top:8px; right:-12px; color:var(--clay); transform:rotate(12deg);"><use href="#fl-bud"/></svg>
+    <svg viewBox="0 0 40 40" class="floral" style="width:22px; height:22px; bottom:-8px; right:-10px; color:var(--pastel-yellow); transform:rotate(20deg);"><use href="#fl-flower3"/></svg>
+    <div class="lock-badge">🔒</div>
+    <h1 class="display">合言葉を入力</h1>
+    <p class="sub">この端末専用の指導せんナビです。他の人と共有しないでください。</p>
+    <input type="password" id="pwInput" placeholder="合言葉">
+    <button class="btn-primary" onclick="tryUnlock()">開く</button>
+    <button class="lock-skip" onclick="unlock()">プロトタイプ確認のためスキップ →</button>
+  </div>
+</div>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark display">指</div>
+    <div>
+      <div class="brand-name">指導せんナビ</div>
+      <div class="brand-sub mono">Personal medication‑guide finder</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="lock-status">🔒 合言葉 設定済み</span>
+  </div>
+  <svg viewBox="0 0 40 40" class="floral" style="width:18px; height:18px; top:8px; right:96px; color:var(--pastel-yellow); transform:rotate(-10deg);"><use href="#fl-flower3"/></svg>
+</header>
+
+<!-- 画面の角に固定表示される、控えめな花のあしらい(狭い画面では非表示) -->
+<svg viewBox="0 0 40 62" class="floral floral-fixed" style="width:32px; height:50px; top:100px; right:26px; color:var(--amber); transform:rotate(6deg);"><use href="#fl-flower-stem"/></svg>
+<svg viewBox="0 0 16 24" class="floral floral-fixed" style="width:14px; height:21px; top:100px; right:76px; color:var(--clay); transform:rotate(-16deg);"><use href="#fl-bud"/></svg>
+<svg viewBox="0 0 40 62" class="floral floral-fixed" style="width:26px; height:40px; bottom:16px; left:20px; color:var(--pastel-yellow); transform:rotate(-4deg);"><use href="#fl-flower-stem"/></svg>
+<svg viewBox="0 0 40 24" class="floral floral-fixed" style="width:26px; height:16px; bottom:14px; left:64px; color:var(--sage); transform:rotate(14deg);"><use href="#fl-leaf"/></svg>
+
+<main>
+  <div class="search-zone">
+    <span class="search-label">医薬品名で検索</span>
+    <div class="search-box">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="drugInput" type="text" placeholder="採用薬から検索(例:アムロジピン、ロキソプロフェン…)" autocomplete="off">
+      <span class="search-count mono" id="drugTotalCount"></span>
+    </div>
+    <div class="suggest-list" id="suggestList"></div>
+  </div>
+
+  <div class="empty-hero" id="emptyHero">
+    <svg viewBox="0 0 40 24" class="floral" style="width:30px; height:18px; top:-6px; left:24%; color:var(--sage); transform:rotate(-12deg);"><use href="#fl-leaf"/></svg>
+    <svg viewBox="0 0 16 24" class="floral" style="width:20px; height:30px; bottom:10px; right:26%; color:var(--amber); transform:rotate(10deg);"><use href="#fl-bud"/></svg>
+    <svg viewBox="0 0 40 40" class="floral" style="width:24px; height:24px; top:14px; right:20%; color:var(--clay); transform:rotate(8deg);"><use href="#fl-flower2"/></svg>
+    <div class="glyph">🔍</div>
+    <h2>薬剤名を入力してください</h2>
+    <p>採用医薬品リストの中から検索します。選択すると、登録済みの指導せんと、検索できるサイト一覧が表示されます。</p>
+  </div>
+
+  <div id="resultZone">
+    <div class="selected-bar">
+      <div>
+        <div class="eyebrow">選択中の医薬品</div>
+        <h2 id="selDrugName">—</h2>
+        <div class="code mono" id="selDrugCode">—</div>
+        <div class="code-list mono" id="selDrugCodes"></div>
+      </div>
+    </div>
+
+    <div class="cols">
+      <!-- site search links -->
+      <div>
+        <div class="panel-head">
+          <div class="panel-title">サイトでさがす <span class="n" id="siteCount">0</span></div>
+        </div>
+        <div id="siteList"></div>
+      </div>
+
+      <!-- registered resources -->
+      <div>
+        <div class="panel-head">
+          <div class="panel-title">登録済み資料 <span class="n" id="resCount">0</span></div>
+          <button class="add-link" onclick="openAddModal()">＋ 資料を追加</button>
+        </div>
+        <div class="audience-filter" id="audienceFilter">
+          <button class="active" data-aud="all" onclick="setAudienceFilter('all')">すべて</button>
+          <button data-aud="patient" onclick="setAudienceFilter('patient')">患者さん向けのみ</button>
+          <button data-aud="hcp" onclick="setAudienceFilter('hcp')">医療関係者向けのみ</button>
+        </div>
+        <div id="resList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MANAGEMENT -->
+  <div class="manage-section" id="manageSection">
+    <div class="manage-grid">
+      <div class="manage-box">
+        <h3>採用医薬品リストの取込</h3>
+        <p class="hint">Excelファイル(.xlsx)をアップロードすると、薬剤名を読み取って一括登録します。</p>
+        <div class="dropzone">
+          <strong>ファイルをドラッグ&ドロップ</strong>
+          クリックして選択することもできます
+          <div><button class="import-file-btn" onclick="mockImport()">Excelを選択(モック)</button></div>
+        </div>
+        <p class="hint" style="margin-top:12px;">現在の登録件数:<span class="mono" id="drugManageCount"></span>件</p>
+      </div>
+
+      <div class="manage-box">
+        <h3>データのバックアップ</h3>
+        <p class="hint">登録した薬剤・資料データをファイルに書き出したり、別の端末で読み込んだりできます。</p>
+        <div class="backup-row">
+          <button class="import-file-btn" onclick="exportData()">📤 JSONで書き出す</button>
+          <label class="import-file-btn" style="cursor:pointer;">
+            📥 JSONを読み込む
+            <input type="file" id="importFileInput" accept="application/json" style="display:none;" onchange="importData(event)">
+          </label>
+        </div>
+        <p class="hint" style="margin-top:12px;">読み込んだデータは、今の登録内容に追加(マージ)されます。同じ薬(YJコード一致)・同じ資料・同じサイト(ドメイン一致)は重複登録されません。</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ADD RESOURCE MODAL -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 class="display" id="modalHeading">資料を登録</h3>
+      <p id="modalDrugLabel">—</p>
+    </div>
+    <div class="modal-body">
+      <div class="type-tabs" id="typeTabs">
+        <button class="type-tab active" data-type="web" style="--tab-color:var(--sage)" onclick="setType('web')">Web</button>
+        <button class="type-tab" data-type="paper" style="--tab-color:var(--clay)" onclick="setType('paper')">紙で取り寄せ</button>
+      </div>
+
+      <div class="field">
+        <label>対象</label>
+        <div class="type-tabs" id="audienceTabs">
+          <button class="type-tab active" data-aud="patient" style="--tab-color:#4F8D77" onclick="setAudience('patient')">患者さん向け</button>
+          <button class="type-tab" data-aud="hcp" style="--tab-color:#D9B84F" onclick="setAudience('hcp')">医療関係者向け</button>
+        </div>
+      </div>
+
+      <div id="typeFields-web">
+        <div class="field">
+          <label>URL</label>
+          <input id="fUrl" placeholder="https://…(貼り付けてEnterでもOK)" onkeydown="if(event.key==='Enter'){event.preventDefault();saveResource();}">
+        </div>
+      </div>
+
+      <div id="typeFields-paper" style="display:none">
+        <div class="field"><label>取り寄せ先(会社名・部署)</label><input id="fPaperFrom" placeholder="例:◯◯製薬 学術部" list="paperFromHistory"></div>
+        <datalist id="paperFromHistory"></datalist>
+        <div class="field"><label>連絡方法</label><input id="fPaperContact" placeholder="例:電話 03-xxxx-xxxx / Webフォーム"></div>
+      </div>
+
+      <div class="field">
+        <label>資料タイトル<span style="font-weight:400;color:var(--ink-faint);"> (空欄でもOK・自動生成されます)</span></label>
+        <input id="fTitle" placeholder="例:服薬指導せん(患者向け)">
+      </div>
+
+      <div class="field">
+        <label>メモ(任意)</label>
+        <textarea id="fMemo" placeholder="取り寄せにかかる日数、注文ロット数、担当者名など自由に"></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeAddModal()">キャンセル</button>
+        <button class="btn-save" id="saveResourceBtn" onclick="saveResource()">登録する</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------------- SEED DATA ---------------- */
+let drugs = [
+  {id:'d1', name:'アムロジピン錠5mg「サワイ」', jan:'4987345601115', gs1:'04987345601112', yj:'2171013F1280', category:'降圧薬', maker:'サワイ'},
+  {id:'d2', name:'アムロジピンOD錠5mg「トーワ」', jan:'4987345602226', gs1:'04987345602223', yj:'2171013F2381', category:'降圧薬', maker:'トーワ'},
+  {id:'d3', name:'ロキソプロフェンNa錠60mg「ニプロ」', jan:'4987345603337', gs1:'04987345603334', yj:'1149011F1032', category:'鎮痛薬', maker:'ニプロ'},
+  {id:'d4', name:'カロナール錠500', jan:'4987345604448', gs1:'04987345604445', yj:'1141007F2036', category:'解熱鎮痛薬', maker:'あゆみ製薬'},
+  {id:'d5', name:'クレストール錠2.5mg', jan:'4987345605559', gs1:'04987345605556', yj:'2189021F1024', category:'脂質異常症治療薬', maker:'アストラゼネカ'},
+  {id:'d6', name:'ジャヌビア錠50mg', jan:'4987345606660', gs1:'04987345606667', yj:'3969013F1029', category:'糖尿病治療薬', maker:'MSD'},
+  {id:'d7', name:'プレドニゾロン錠5mg「JG」', jan:'4987345607771', gs1:'04987345607778', yj:'2454005F1157', category:'副腎皮質ホルモン', maker:'日本ジェネリック'},
+  {id:'d8', name:'タケキャブ錠20mg', jan:'4987345608882', gs1:'04987345608889', yj:'2329027F1023', category:'消化性潰瘍治療薬', maker:'武田薬品'},
+  {id:'d9', name:'レイボー錠50mg', jan:'4987345609993', gs1:'04987345609990', yj:'1179020F1024', category:'片頭痛治療薬', maker:'日本イーライリリー'},
+  {id:'d10', name:'オルメテック錠20mg', jan:'4987345610004', gs1:'04987345610001', yj:'2149014F2029', category:'降圧薬', maker:'第一三共'},
+  {id:'d11', name:'メマンチン塩酸塩OD錠5mg「DSEP」', jan:'4987345611115', gs1:'04987345611112', yj:'1190021F3025', category:'抗認知症薬', maker:'第一三共エスファ'},
+];
+
+let resources = [
+  {id:'r1', drugId:'d1', type:'web', title:'アムロジピン錠 患者向け服薬指導せん', url:'https://example-pharma.co.jp/patient/amlodipine.pdf', memo:'', audience:'patient'},
+  {id:'r3', drugId:'d4', type:'paper', title:'カロナール 患者向けリーフレット(冊子)', paperFrom:'あゆみ製薬 学術部', paperContact:'0120-xxx-xxx', memo:'発注から到着まで約1週間。10部単位', audience:'patient'},
+  {id:'r4', drugId:'d9', type:'web', title:'レイボー錠を服用される方へ(患者さん向けRMP資材)', url:'https://medical.lilly.com/jp/assets/vaultpdf/8e8b6934690fe72ab3f13f631e47d329808d7fb59c3adbed5b47bf050a1d8a4b/%E3%83%AC%E3%82%A4%E3%83%9C%E3%83%BC%E9%8C%A0%E3%82%92%E6%9C%8D%E7%94%A8%E3%81%95%E3%82%8C%E3%82%8B%E6%96%B9%E3%81%B8%EF%BC%88%E6%82%A3%E8%80%85%E3%81%95%E3%82%93%E5%90%91%E3%81%91RMP%E8%B3%87%E6%9D%90%EF%BC%89%20%7C%20%E5%8C%BB%E7%99%82%E9%96%A2%E4%BF%82%E8%80%85%E5%90%91%E3%81%91%20%E2%80%93%20%E6%97%A5%E6%9C%AC%E3%82%A4%E3%83%BC%E3%83%A9%E3%82%A4%E3%83%AA%E3%83%BC%E6%A0%AA%E5%BC%8F%E4%BC%9A%E7%A4%BE', memo:'医療関係者向けページ内にある患者さん向け資材。ページ自体は医療者向けだが資材の対象は患者さん向け', audience:'patient'},
+  {id:'r5', drugId:'d5', type:'web', title:'クレストール 適正使用ガイド(医療関係者向け)', url:'https://example-pharma.co.jp/hcp/crestor_guide.pdf', memo:'処方時の参考用。患者さんには渡さない', audience:'hcp'},
+  {id:'r6', drugId:'d11', type:'web', title:'メマンチンOD錠「DSEP」を服用される方へ', url:'https://med.daiichisankyo-ep.co.jp/shizai/files/252/EPMEMAG1P03001-1.pdf', memo:'第一三共エスファ 指導用資材サイトより', audience:'patient'},
+];
+
+let sites = [
+  {id:'s1', name:'くすりのしおり', domain:'rad-ar.or.jp', required:true},
+  {id:'s4', name:'PMDA 患者向医薬品ガイド', domain:'pmda.go.jp', required:true},
+];
+
+const TYPE_META = {
+  web:   {label:'WEB',  color:'var(--sage)',  tint:'var(--sage-tint)'},
+  paper: {label:'紙',   color:'var(--clay)',  tint:'var(--clay-tint)'},
+};
+const AUDIENCE_META = {
+  patient: {label:'患者さん向け', color:'#4F8D77', tint:'#DCF3E7'},
+  hcp:     {label:'医療関係者向け', color:'#B8942E', tint:'#FBF3D8'},
+};
+
+let selectedDrugId = null;
+let currentType = 'web';
+let audienceFilter = 'all';
+let idCounter = 100;
+
+/* ---------------- LOCK ---------------- */
+function unlock(){ document.getElementById('lockScreen').classList.add('hidden'); }
+function tryUnlock(){ unlock(); } // mockup: any input passes
+
+/* ---------------- SEARCH / AUTOCOMPLETE ---------------- */
+const drugInput = document.getElementById('drugInput');
+const suggestList = document.getElementById('suggestList');
+document.getElementById('drugTotalCount').textContent = drugs.length + '件';
+document.getElementById('drugManageCount').textContent = ' ' + drugs.length;
+
+drugInput.addEventListener('input', renderSuggestions);
+drugInput.addEventListener('focus', renderSuggestions);
+document.addEventListener('click', (e)=>{
+  if(!e.target.closest('.search-zone')) suggestList.classList.remove('open');
+});
+
+// カタカナをひらがなに変換し、全角英数字を半角に、大文字を小文字に統一する。
+// これにより「あむろ」と入力しても「アムロジピン」がヒットするようになる。
+function toSearchKey(str){
+  if(!str) return '';
+  return str
+    .replace(/[\u30a1-\u30f6]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60)) // カタカナ→ひらがな
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)) // 全角英数字→半角
+    .toLowerCase();
+}
+
+function renderSuggestions(){
+  const qRaw = drugInput.value.trim();
+  const q = toSearchKey(qRaw);
+  const matches = drugs.filter(d => q==='' ? true : toSearchKey(d.name).includes(q) || toSearchKey(d.category).includes(q));
+  if(matches.length===0){
+    suggestList.innerHTML = `<div class="suggest-empty">一致する採用薬が見つかりません</div>`;
+  } else {
+    suggestList.innerHTML = matches.slice(0,8).map(d=>{
+      const cnt = resources.filter(r=>r.drugId===d.id).length;
+      return `<div class="suggest-item" onclick="selectDrug('${d.id}')">
+        <div>
+          <div class="suggest-name">${escapeHtml(d.name)}</div>
+          <div class="suggest-meta">${escapeHtml(d.category)} · <span class="mono">YJ ${d.yj}</span></div>
+        </div>
+        <span class="suggest-count">資料${cnt}件</span>
+      </div>`;
+    }).join('');
+  }
+  suggestList.classList.add('open');
+}
+
+function selectDrug(id){
+  selectedDrugId = id;
+  drugInput.value = '';
+  suggestList.classList.remove('open');
+  renderSelection();
+}
+
+function clearSelection(){
+  selectedDrugId = null;
+  document.getElementById('resultZone').classList.remove('open');
+  document.getElementById('emptyHero').style.display = 'block';
+  drugInput.focus();
+}
+
+function renderSelection(){
+  const d = drugs.find(x=>x.id===selectedDrugId);
+  if(!d) return;
+  audienceFilter = 'all';
+  document.querySelectorAll('#audienceFilter button').forEach(b=>b.classList.toggle('active', b.dataset.aud==='all'));
+  document.getElementById('emptyHero').style.display = 'none';
+  document.getElementById('resultZone').classList.add('open');
+  document.getElementById('selDrugName').textContent = d.name;
+  document.getElementById('selDrugCode').textContent = d.category;
+  document.getElementById('selDrugCodes').innerHTML = `
+    <span class="code-item"><span class="k">JAN</span>${d.jan}</span>
+    <span class="code-item"><span class="k">GS1</span>${d.gs1}</span>
+    <span class="code-item"><span class="k">YJ</span>${d.yj}</span>
+  `;
+  document.getElementById('modalDrugLabel').textContent = d.name + ' に資料を登録';
+  renderResources();
+  renderSiteLinks();
+}
+
+/* ---------------- RESOURCE LIST ---------------- */
+function renderResources(){
+  let list = resources.filter(r=>r.drugId===selectedDrugId);
+  if(audienceFilter!=='all') list = list.filter(r=>r.audience===audienceFilter);
+  document.getElementById('resCount').textContent = list.length;
+  const el = document.getElementById('resList');
+  if(list.length===0){
+    el.innerHTML = `<div class="empty-panel">${audienceFilter==='all' ? 'まだ資料が登録されていません。<br>右上の「＋ 資料を追加」から登録できます。' : '該当する対象の資料はまだありません。'}</div>`;
+    return;
+  }
+  el.innerHTML = list.map(r=>{
+    const meta = TYPE_META[r.type];
+    const aud = AUDIENCE_META[r.audience] || AUDIENCE_META.patient;
+    let detail = '';
+    let action = '';
+    if(r.type==='web'){
+      action = `<a href="${escapeHtml(r.url||'#')}" target="_blank" rel="noopener">開く ↗</a>`;
+    } else {
+      detail = `<div class="res-detail"><span class="k">取り寄せ先</span>${escapeHtml(r.paperFrom||'')}</div>
+                <div class="res-detail"><span class="k">連絡方法</span>${escapeHtml(r.paperContact||'')}</div>`;
+      action = `<button onclick="copyText('${escapeHtml(r.paperContact||'')}')">連絡先をコピー</button>`;
+    }
+    return `<div class="res-card" style="--tab-color:${meta.color};--tab-tint:${meta.tint}">
+      <div class="res-top">
+        <div class="res-title">${escapeHtml(r.title)}</div>
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0;">
+          <span class="res-type-chip">${meta.label}</span>
+          <span class="aud-chip" style="--aud-color:${aud.color};--aud-tint:${aud.tint}">${aud.label}</span>
+        </div>
+      </div>
+      ${detail}
+      ${r.memo ? `<div class="res-memo">💬 ${escapeHtml(r.memo)}</div>` : ''}
+      <div class="res-actions">
+        ${action}
+        <button onclick="openEditModal('${r.id}')">編集</button>
+        <button class="res-del" onclick="deleteResource('${r.id}')">削除</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function deleteResource(id){
+  resources = resources.filter(r=>r.id!==id);
+  renderResources();
+  showToast('資料を削除しました');
+}
+
+function setAudienceFilter(v){
+  audienceFilter = v;
+  document.querySelectorAll('#audienceFilter button').forEach(b=>b.classList.toggle('active', b.dataset.aud===v));
+  renderResources();
+}
+
+/* ---------------- SITE SEARCH LINKS ---------------- */
+const KEYWORDS = ['服薬指導せん','患者向け資料','くすりのしおり','患者向医薬品ガイド'];
+
+function buildSiteSearchUrl(domain, drugName){
+  const kw = KEYWORDS.map(k=>`"${k}"`).join(' OR ');
+  const q = `site:${domain} ${drugName} (${kw})`;
+  return 'https://www.google.com/search?q=' + encodeURIComponent(q);
+}
+
+// 「エストラジオール錠0.5mg「F」［更年期障害...］」のような
+// メーカー名「」・適応症［］などの括弧内を除去し、全角英数字を半角に統一して比較しやすくする
+function normalizeSioriName(s){
+  if(!s) return '';
+  return s
+    .replace(/「[^」]*」/g, '')
+    .replace(/［[^］]*］/g, '')
+    .replace(/【[^】]*】/g, '')
+    .replace(/[（）()]/g, '')
+    .replace(/\s+/g, '')
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)) // 全角→半角
+    .toLowerCase();
+}
+
+// RAD-AR(くすりのしおり)の検索候補APIを叩き、薬品名に一致する『しおり』のIDを探す。
+// CORS制限なし(Access-Control-Allow-Origin: *)で確認済み。見つかればそのIDを、見つからなければnullを返す。
+async function fetchSioriId(drugName){
+  const endpoint = `https://www.rad-ar.or.jp/siori_register/siori_api/?v=25&r=k&k=t&w=${encodeURIComponent(drugName)}&g=0`;
+  try{
+    const res = await fetch(endpoint);
+    if(!res.ok) return null;
+    const data = await res.json();
+    const items = data.items || [];
+    if(items.length === 0) return null;
+
+    const target = normalizeSioriName(drugName);
+    // 1. 正規化した名前が完全一致するものを最優先
+    let chosen = items.find(it => normalizeSioriName(it.name) === target);
+    // 2. なければ、正規化した名前が前方一致(用量・剤形まで含めて近い)するものを探す
+    if(!chosen){
+      chosen = items.find(it => normalizeSioriName(it.name).startsWith(target) || target.startsWith(normalizeSioriName(it.name)));
+    }
+    // 3. それでもなければ、候補の先頭(APIが最も関連度が高いと判断したもの)を採用
+    if(!chosen) chosen = items[0];
+    return chosen.id;
+  }catch(e){
+    // ネットワークエラーなど。フォールバック(Google site:検索)に委ねる。
+    return null;
+  }
+}
+
+function renderSiteLinks(){
+  const d = drugs.find(x=>x.id===selectedDrugId);
+  const visibleSites = sites.filter(s => !s.makerOnly || s.makerOnly === d.maker);
+  const hiddenCount = sites.length - visibleSites.length;
+  document.getElementById('siteCount').textContent = visibleSites.length;
+  const el = document.getElementById('siteList');
+  if(visibleSites.length===0){
+    el.innerHTML = `<div class="empty-panel">検索対象サイトが未登録です。<br>下の「管理」から追加できます。</div>`;
+    return;
+  }
+  el.innerHTML = visibleSites.map(s=>{
+    const url = buildSiteSearchUrl(s.domain, d.name);
+    const isSiori = s.domain === 'rad-ar.or.jp';
+    return `<div class="site-card">
+      <div class="site-info">
+        <div class="site-name">${escapeHtml(s.name)}${s.required ? ' <span class="req-badge">必須</span>' : ''}</div>
+      </div>
+      <a class="site-go" id="${isSiori ? 'siteGoSiori' : ''}" href="${url}" target="_blank" rel="noopener">
+        ${isSiori ? '<span id="siteGoSioriLabel">検索 ↗</span>' : '検索 ↗'}
+      </a>
+    </div>`;
+  }).join('');
+  if(hiddenCount > 0){
+    el.innerHTML += `<div class="hidden-note">他メーカー限定のサイトを${hiddenCount}件、この薬とは関係ないため非表示にしています</div>`;
+  }
+
+  // くすりのしおりだけ、ページ読み込み後に非同期でAPIを叩き、ピンポイントのURLに差し替える
+  const sioriSite = visibleSites.find(s => s.domain === 'rad-ar.or.jp');
+  if(sioriSite){
+    const thisDrugId = selectedDrugId; // 差し替え完了までに別の薬が選ばれていないか確認するため保持
+    const labelEl = document.getElementById('siteGoSioriLabel');
+    if(labelEl) labelEl.textContent = '検索中…';
+    fetchSioriId(d.name).then(id=>{
+      if(selectedDrugId !== thisDrugId) return; // その間に別の薬に切り替わっていたら何もしない
+      const linkEl = document.getElementById('siteGoSiori');
+      const label = document.getElementById('siteGoSioriLabel');
+      if(!linkEl) return;
+      if(id){
+        linkEl.href = `https://www.rad-ar.or.jp/siori/search/result?n=${id}`;
+        if(label) label.textContent = 'しおりを開く ↗';
+      } else {
+        if(label) label.textContent = '検索 ↗'; // フォールバック(Google site:検索)のまま
+      }
+    });
+  }
+}
+
+function mockImport(){
+  const added = [
+    {id:'d'+(idCounter++), name:'ミカルディス錠40mg', jan:'4987345612226', gs1:'04987345612223', yj:'2149042F1027', category:'降圧薬', maker:'日本ベーリンガーインゲルハイム'},
+    {id:'d'+(idCounter++), name:'エンレスト錠200mg', jan:'4987345613337', gs1:'04987345613334', yj:'2190021F1024', category:'心不全治療薬', maker:'ノバルティスファーマ'},
+  ];
+  drugs = drugs.concat(added);
+  document.getElementById('drugTotalCount').textContent = drugs.length + '件';
+  document.getElementById('drugManageCount').textContent = ' ' + drugs.length;
+  showToast('Excelから2件の薬剤を取り込みました(モック)');
+}
+
+/* ---------------- BACKUP: EXPORT / IMPORT ---------------- */
+function exportData(){
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    version: 1,
+    drugs,
+    resources,
+    sites,
+    paperFromHistory,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const dateStr = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `shidousen-navi-backup_${dateStr}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  showToast('バックアップファイルを書き出しました');
+}
+
+function importData(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try{
+      const data = JSON.parse(e.target.result);
+      if(!Array.isArray(data.drugs) || !Array.isArray(data.resources) || !Array.isArray(data.sites)){
+        showToast('ファイルの形式が正しくありません');
+        return;
+      }
+
+      let addedDrugs = 0, addedResources = 0, addedSites = 0;
+
+      // ① 薬剤をマージ。YJコードが一致すれば同じ薬とみなして既存のものを使う(重複登録しない)。
+      //    YJコードがない場合は薬剤名で判定。新規なら新しいIDを振って追加する。
+      const drugIdMap = {}; // インポート元のID → このアプリ内のID
+      data.drugs.forEach(d => {
+        let existing = null;
+        if(d.yj) existing = drugs.find(x => x.yj && x.yj === d.yj);
+        if(!existing) existing = drugs.find(x => x.name === d.name);
+        if(existing){
+          drugIdMap[d.id] = existing.id;
+        } else {
+          const newId = 'd' + (idCounter++);
+          drugs.push({...d, id: newId});
+          drugIdMap[d.id] = newId;
+          addedDrugs++;
+        }
+      });
+
+      // ② 資料をマージ。同じ薬・同じ種類・同じURL(またはWebなら取り寄せ先)・同じタイトルなら重複とみなしてスキップ。
+      data.resources.forEach(r => {
+        const localDrugId = drugIdMap[r.drugId];
+        if(!localDrugId) return; // 対応する薬が見つからない場合はスキップ
+        const isDup = resources.some(x =>
+          x.drugId === localDrugId &&
+          x.type === r.type &&
+          x.title === r.title &&
+          (r.type === 'web' ? x.url === r.url : x.paperFrom === r.paperFrom)
+        );
+        if(isDup) return;
+        resources.push({...r, id: 'r' + (idCounter++), drugId: localDrugId});
+        addedResources++;
+      });
+
+      // ③ サイトをマージ。ドメインが一致すれば既存のものを優先し、重複追加しない。
+      data.sites.forEach(s => {
+        const existing = sites.find(x => x.domain === s.domain);
+        if(existing) return;
+        sites.push({...s, id: 's' + (idCounter++)});
+        addedSites++;
+      });
+
+      // ④ 取り寄せ先の履歴もマージ
+      if(Array.isArray(data.paperFromHistory)){
+        data.paperFromHistory.forEach(name => {
+          if(name && !paperFromHistory.includes(name)) paperFromHistory.push(name);
+        });
+      }
+
+      document.getElementById('drugTotalCount').textContent = drugs.length + '件';
+      document.getElementById('drugManageCount').textContent = ' ' + drugs.length;
+      updatePaperFromDatalist();
+      if(selectedDrugId) renderSelection();
+
+      showToast(`取り込み完了:薬剤+${addedDrugs}件、資料+${addedResources}件、サイト+${addedSites}件`);
+    }catch(err){
+      showToast('読み込みに失敗しました(JSONファイルを確認してください)');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = ''; // 同じファイルを連続で選んでも onchange が発火するようにリセット
+}
+
+/* ---------------- ADD / EDIT RESOURCE MODAL ---------------- */
+let editingResourceId = null; // nullなら新規登録、値が入っていれば編集中
+
+function openAddModal(){
+  if(!selectedDrugId) return;
+  editingResourceId = null;
+  document.getElementById('modalHeading').textContent = '資料を登録';
+  document.getElementById('saveResourceBtn').textContent = '登録する';
+  document.getElementById('addModal').classList.add('open');
+  setType(currentType);      // 前回選んだ種類を維持
+  setAudience(currentAudience); // 前回選んだ対象を維持
+  ['fTitle','fUrl','fPaperFrom','fPaperContact','fMemo'].forEach(id=>{
+    document.getElementById(id).value = '';
+  });
+  setTimeout(()=>{
+    const target = currentType==='web' ? 'fUrl' : 'fPaperFrom';
+    document.getElementById(target).focus();
+  }, 50);
+}
+
+function openEditModal(resourceId){
+  const r = resources.find(x=>x.id===resourceId);
+  if(!r) return;
+  editingResourceId = resourceId;
+  document.getElementById('modalHeading').textContent = '資料を編集';
+  document.getElementById('saveResourceBtn').textContent = '変更を保存';
+  document.getElementById('addModal').classList.add('open');
+  setType(r.type);
+  setAudience(r.audience || 'patient');
+  document.getElementById('fTitle').value = r.title || '';
+  document.getElementById('fUrl').value = r.url || '';
+  document.getElementById('fPaperFrom').value = r.paperFrom || '';
+  document.getElementById('fPaperContact').value = r.paperContact || '';
+  document.getElementById('fMemo').value = r.memo || '';
+  setTimeout(()=>{
+    document.getElementById('fTitle').focus();
+  }, 50);
+}
+
+function closeAddModal(){ document.getElementById('addModal').classList.remove('open'); editingResourceId = null; }
+
+let currentAudience = 'patient';
+function setAudience(aud){
+  currentAudience = aud;
+  document.querySelectorAll('#audienceTabs .type-tab').forEach(b=>b.classList.toggle('active', b.dataset.aud===aud));
+}
+
+function setType(type){
+  currentType = type;
+  document.querySelectorAll('.type-tab').forEach(b=>b.classList.toggle('active', b.dataset.type===type));
+  ['web','paper'].forEach(t=>{
+    document.getElementById('typeFields-'+t).style.display = (t===type)?'block':'none';
+  });
+}
+
+function saveResource(){
+  let title = document.getElementById('fTitle').value.trim();
+  const url = document.getElementById('fUrl').value.trim();
+  if(currentType==='web' && !url && !title){ showToast('URLかタイトルのどちらかは入力してください'); return; }
+  if(currentType==='paper' && !title){ showToast('資料タイトルを入力してください'); return; }
+  if(!title){
+    // URLからドメイン名を抜き出して仮タイトルにする
+    try{
+      const host = new URL(url).hostname.replace(/^www\./,'');
+      title = host + ' の資料';
+    }catch(e){ title = '無題の資料'; }
+  }
+  const memo = document.getElementById('fMemo').value.trim();
+  const fields = {type:currentType, title, memo, audience:currentAudience};
+  if(currentType==='web'){
+    fields.url = url;
+    fields.paperFrom = undefined;
+    fields.paperContact = undefined;
+  } else {
+    fields.paperFrom = document.getElementById('fPaperFrom').value.trim();
+    fields.paperContact = document.getElementById('fPaperContact').value.trim();
+    fields.url = undefined;
+    if(fields.paperFrom && !paperFromHistory.includes(fields.paperFrom)){
+      paperFromHistory.push(fields.paperFrom);
+      updatePaperFromDatalist();
+    }
+  }
+
+  if(editingResourceId){
+    const idx = resources.findIndex(x=>x.id===editingResourceId);
+    if(idx !== -1){
+      resources[idx] = {...resources[idx], ...fields};
+    }
+    closeAddModal();
+    renderResources();
+    showToast('資料を更新しました');
+  } else {
+    resources.push({id:'r'+(idCounter++), drugId:selectedDrugId, ...fields});
+    closeAddModal();
+    renderResources();
+    showToast('資料を登録しました');
+  }
+}
+
+let paperFromHistory = ['あゆみ製薬 学術部'];
+function updatePaperFromDatalist(){
+  document.getElementById('paperFromHistory').innerHTML =
+    paperFromHistory.map(v=>`<option value="${escapeHtml(v)}">`).join('');
+}
+
+/* ---------------- UTIL ---------------- */
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function copyText(t){
+  if(!t){ showToast('コピーする内容がありません'); return; }
+  navigator.clipboard?.writeText(t).then(()=>showToast('コピーしました: '+t)).catch(()=>showToast(t));
+}
+let toastTimer;
+function showToast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove('show'), 2200);
+}
+
+/* init */
+updatePaperFromDatalist();
+</script>
+</body>
+</html>
