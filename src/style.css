@@ -281,6 +281,7 @@ main{max-width:1080px; margin:0 auto; padding:32px 28px 80px;}
 }
 .dropzone strong{color:var(--sage-deep); display:block; margin-bottom:4px; font-size:13px;}
 .import-file-btn{
+  display:inline-block;
   margin-top:10px; background:var(--ink); color:#fff; border:none;
   padding:9px 16px; border-radius:99px; font-size:12.5px; font-weight:600;
 }
