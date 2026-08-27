@@ -17,7 +17,7 @@ Firebase(Firestore)にデータを保存し、GitHub Pagesで静的サイトと�
 2. 「プロジェクトを追加」→ プロジェクト名を入力(例:`shidousen-navi`)→ 作成
    - Google アナリティクスは不要なら無効のままでOK
 3. 左メニュー「構築」→「Firestore Database」→「データベースを作成」
-   - ロケーションは `asia-northeast1`(東京)を推奨
+   - ロケーションは `asia-northeast1`(東京)または `asia-northeast2`(大阪)など、日本国内リージョンを推奨(本プロジェクトでは `asia-northeast2` を使用)
    - セキュリティルールは「本番環境モード」を選択(あとで本リポジトリの `firestore.rules` を反映します)
 4. 左メニュー「構築」→「Authentication」→「始める」
    - 「Sign-in method」タブ →「Google」を選び、有効にする→保存
@@ -28,7 +28,7 @@ Firebase(Firestore)にデータを保存し、GitHub Pagesで静的サイトと�
 ### 1b. (PDFアップロード機能を使う場合)Cloud Storageを有効にする
 
 1. Firebase Console 左下の「アップグレード」から **Blazeプラン** に登録する(クレジットカード登録が必要。個人利用の範囲では実際の請求はほぼ発生しない見込み)
-2. 左メニュー「構築」→「Storage」→「始める」で既定のバケットを作成する(ロケーションは Firestore と同じ `asia-northeast1` を推奨)。セキュリティルールの初期選択はどちらでもよい(あとで本リポジトリの `storage.rules` を反映します)
+2. 左メニュー「構築」→「Storage」→「始める」で既定のバケットを作成する(**Firestoreと同じロケーション**を選ぶこと。本プロジェクトでは `asia-northeast2`)。セキュリティルールの初期選択はどちらでもよい(あとで本リポジトリの `storage.rules` を反映します)
 
 ### 2. ローカルで動作確認する
 
@@ -63,7 +63,7 @@ firebase deploy --only firestore:rules
 PDFアップロード機能(Cloud Storage)を使う場合は、手順1bでStorageを有効化したあとに以下も実行する:
 
 ```powershell
-firebase deploy --only storage:rules
+firebase deploy --only storage
 ```
 
 ### 4. GitHubリポジトリのSecretsを設定する

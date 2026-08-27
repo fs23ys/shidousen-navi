@@ -2,7 +2,10 @@
   "firestore": {
     "rules": "firestore.rules"
   },
-  "storage": {
-    "rules": "storage.rules"
-  }
+  "storage": [
+    {
+      "bucket": "shidousen-navi.firebasestorage.app",
+      "rules": "storage.rules"
+    }
+  ]
 }
