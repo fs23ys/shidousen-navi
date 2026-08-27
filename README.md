@@ -5,8 +5,9 @@ Firebase(Firestore)にデータを保存し、GitHub Pagesで静的サイトと�
 
 - 認証:あなた自身のGoogleアカウントでのサインイン(Firebase Auth)。指定した1つのメールアドレスのみアクセス許可。
 - データ:Firestore(drugs / resources / sites / paperFromHistory)
+- ファイル:資料のPDFを直接アプリ内(Cloud Storage)にアップロードして保存することもできます(外部サイトが強制ダウンロード設定でも、アプリ内から直接開けるようにするため)
 - ホスティング:GitHub Pages(GitHub Actionsで自動ビルド・デプロイ)
-- 料金:Firestore無料枠(Sparkプラン)の範囲で運用できます。Cloud Storageは使用していないため、Blazeプランへの登録は不要です。
+- 料金:Firestoreのみなら無料枠(Sparkプラン)の範囲で運用できます。PDFアップロード機能(Cloud Storage)を使うには **Blazeプラン(従量課金)への登録が必要**です(2024年以降のFirebaseの仕様変更のため)。個人利用の範囲なら実際の請求はほぼ発生しない見込みですが、クレジットカード登録が必要です。
 
 ## セットアップ手順(初回のみ)
 
@@ -23,6 +24,11 @@ Firebase(Firestore)にデータを保存し、GitHub Pagesで静的サイトと�
 5. 左メニュー「プロジェクトの概要」の歯車アイコン →「プロジェクトの設定」→「全般」タブ
    - 「マイアプリ」→ Webアプリのアイコン(`</>`)をクリックしてアプリを登録(アプリ名は任意、Firebase Hostingは不要なのでチェックしなくてOK)
    - 表示された `firebaseConfig` の値(`apiKey` `authDomain` `projectId` `storageBucket` `messagingSenderId` `appId`)を控えておく
+
+### 1b. (PDFアップロード機能を使う場合)Cloud Storageを有効にする
+
+1. Firebase Console 左下の「アップグレード」から **Blazeプラン** に登録する(クレジットカード登録が必要。個人利用の範囲では実際の請求はほぼ発生しない見込み)
+2. 左メニュー「構築」→「Storage」→「始める」で既定のバケットを作成する(ロケーションは Firestore と同じ `asia-northeast1` を推奨)。セキュリティルールの初期選択はどちらでもよい(あとで本リポジトリの `storage.rules` を反映します)
 
 ### 2. ローカルで動作確認する
 
@@ -52,6 +58,12 @@ firebase login
 
 ```powershell
 firebase deploy --only firestore:rules
+```
+
+PDFアップロード機能(Cloud Storage)を使う場合は、手順1bでStorageを有効化したあとに以下も実行する:
+
+```powershell
+firebase deploy --only storage:rules
 ```
 
 ### 4. GitHubリポジトリのSecretsを設定する

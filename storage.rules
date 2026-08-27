@@ -1,0 +1,13 @@
+rules_version = '2';
+
+// 指導せんナビ:資料のPDF保存用。Firestoreルールと同じ考え方で、
+// 認証済み・かつ本人のメールアドレスの場合のみ読み書きを許可する。
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email == 'fs.23ys@gmail.com';
+    }
+  }
+}

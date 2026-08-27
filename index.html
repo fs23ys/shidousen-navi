@@ -217,6 +217,11 @@
           <label>URL</label>
           <input id="fUrl" placeholder="https://…(貼り付けてEnterでもOK)">
         </div>
+        <div class="field">
+          <label>またはPDFファイルをアップロード<span style="font-weight:400;color:var(--ink-faint);"> (サイト側が強制ダウンロードでも、アプリ内から直接開けるようになります)</span></label>
+          <input type="file" id="fFile" accept="application/pdf">
+          <div id="fFileCurrent" style="font-size:11.5px;color:var(--ink-faint);margin-top:6px;"></div>
+        </div>
       </div>
 
       <div id="typeFields-paper" style="display:none">

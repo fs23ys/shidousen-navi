@@ -12,6 +12,9 @@ import {
   addResourcesBatch,
   addSitesBatch,
   addPaperFromHistoryMany,
+  uploadResourceFile,
+  deleteResourceFile,
+  MAX_RESOURCE_FILE_BYTES,
 } from './store.js';
 import { toSearchKey } from './lib/searchKey.js';
 import { fetchSioriId, sioriDirectUrl } from './lib/siori.js';
@@ -210,6 +213,9 @@ function renderResources() {
       let action = '';
       if (r.type === 'web') {
         action = `<a href="${escapeHtml(r.url || '#')}" target="_blank" rel="noopener">開く ↗</a>`;
+        if (r.storagePath) {
+          detail = `<div class="res-detail">📎 アプリ内に保存したPDF(外部サイトの状態に関わらず開けます)</div>`;
+        }
       } else {
         detail = `<div class="res-detail"><span class="k">取り寄せ先</span>${escapeHtml(r.paperFrom || '')}</div>
                   <div class="res-detail"><span class="k">連絡方法</span>${escapeHtml(r.paperContact || '')}</div>`;
@@ -241,7 +247,8 @@ resListEl.addEventListener('click', async (e) => {
   const action = btn.dataset.action;
   if (action === 'edit') openEditModal(btn.dataset.id);
   if (action === 'delete') {
-    await deleteResource(btn.dataset.id);
+    const target = resources.find((x) => x.id === btn.dataset.id);
+    await deleteResource(btn.dataset.id, target?.storagePath);
     showToast('資料を削除しました');
   }
   if (action === 'copy') copyText(btn.dataset.text);
@@ -309,6 +316,8 @@ function renderSiteLinks() {
 /* ---------------- ADD / EDIT RESOURCE MODAL ---------------- */
 const addModal = document.getElementById('addModal');
 const fUrl = document.getElementById('fUrl');
+const fFile = document.getElementById('fFile');
+const fFileCurrent = document.getElementById('fFileCurrent');
 const fTitle = document.getElementById('fTitle');
 const fPaperFrom = document.getElementById('fPaperFrom');
 const fPaperContact = document.getElementById('fPaperContact');
@@ -336,6 +345,8 @@ function openAddModal() {
   setType(currentType); // 前回選んだ種類を維持
   setAudience(currentAudience); // 前回選んだ対象を維持
   [fTitle, fUrl, fPaperFrom, fPaperContact, fMemo].forEach((el) => (el.value = ''));
+  fFile.value = '';
+  fFileCurrent.textContent = '';
   setTimeout(() => {
     (currentType === 'web' ? fUrl : fPaperFrom).focus();
   }, 50);
@@ -355,6 +366,8 @@ function openEditModal(resourceId) {
   fPaperFrom.value = r.paperFrom || '';
   fPaperContact.value = r.paperContact || '';
   fMemo.value = r.memo || '';
+  fFile.value = '';
+  fFileCurrent.textContent = r.storagePath ? '📎 現在アップロード済みのPDFがあります。新しいファイルを選ぶと置き換わります。' : '';
   setTimeout(() => fTitle.focus(), 50);
 }
 
@@ -380,38 +393,68 @@ function setType(type) {
 
 async function saveResource() {
   let title = fTitle.value.trim();
-  const url = fUrl.value.trim();
-  if (currentType === 'web' && !url && !title) {
-    showToast('URLかタイトルのどちらかは入力してください');
+  let url = fUrl.value.trim();
+  const file = fFile.files[0];
+  const editingBefore = editingResourceId ? resources.find((x) => x.id === editingResourceId) : null;
+
+  if (currentType === 'web' && !url && !file && !title) {
+    showToast('URL・PDFファイル・タイトルのいずれかを入力してください');
     return;
   }
   if (currentType === 'paper' && !title) {
     showToast('資料タイトルを入力してください');
     return;
   }
-  if (!title) {
-    try {
-      const host = new URL(url).hostname.replace(/^www\./, '');
-      title = host + ' の資料';
-    } catch (e) {
-      title = '無題の資料';
-    }
-  }
-  const memo = fMemo.value.trim();
-  const fields = { type: currentType, title, memo, audience: currentAudience };
-  if (currentType === 'web') {
-    fields.url = url;
-    fields.paperFrom = undefined;
-    fields.paperContact = undefined;
-  } else {
-    fields.paperFrom = fPaperFrom.value.trim();
-    fields.paperContact = fPaperContact.value.trim();
-    fields.url = undefined;
+  if (file && file.size > MAX_RESOURCE_FILE_BYTES) {
+    showToast('ファイルが大きすぎます(20MBまで)');
+    return;
   }
 
   const saveBtn = document.getElementById('saveResourceBtn');
   saveBtn.disabled = true;
   try {
+    let storagePath;
+    if (currentType === 'web' && file) {
+      saveBtn.innerHTML = `<span class="spinner-inline"></span>アップロード中…`;
+      const uploaded = await uploadResourceFile(selectedDrugId, file);
+      url = uploaded.url;
+      storagePath = uploaded.storagePath;
+      if (editingBefore?.storagePath) await deleteResourceFile(editingBefore.storagePath);
+    }
+
+    if (!title) {
+      if (currentType === 'web' && file) {
+        title = file.name.replace(/\.[^.]+$/, '');
+      } else if (currentType === 'web' && url) {
+        title = titleFromUrl(url);
+      } else {
+        title = '無題の資料';
+      }
+    }
+
+    const memo = fMemo.value.trim();
+    const fields = { type: currentType, title, memo, audience: currentAudience };
+    if (currentType === 'web') {
+      fields.url = url;
+      fields.paperFrom = undefined;
+      fields.paperContact = undefined;
+      if (storagePath) {
+        fields.storagePath = storagePath;
+      } else if (editingBefore?.storagePath && url !== editingBefore.url) {
+        // アップロード済みファイルのURLから、手動で別のURLに書き換えられた場合は紐付けを解除する
+        fields.storagePath = undefined;
+        await deleteResourceFile(editingBefore.storagePath);
+      }
+    } else {
+      fields.paperFrom = fPaperFrom.value.trim();
+      fields.paperContact = fPaperContact.value.trim();
+      fields.url = undefined;
+      if (editingBefore?.storagePath) {
+        fields.storagePath = undefined;
+        await deleteResourceFile(editingBefore.storagePath);
+      }
+    }
+
     if (editingResourceId) {
       await updateResource(editingResourceId, fields);
       closeAddModal();
@@ -422,9 +465,10 @@ async function saveResource() {
       showToast('資料を登録しました');
     }
   } catch (e) {
-    showToast('保存に失敗しました。通信状況をご確認ください');
+    showToast(e?.message === 'FILE_TOO_LARGE' ? 'ファイルが大きすぎます(20MBまで)' : '保存に失敗しました。通信状況をご確認ください');
   } finally {
     saveBtn.disabled = false;
+    saveBtn.textContent = editingResourceId ? '変更を保存' : '登録する';
   }
 }
 

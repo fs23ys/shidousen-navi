@@ -10,7 +10,10 @@ import {
   arrayUnion,
   deleteField,
 } from 'firebase/firestore';
-import { db } from './firebase.js';
+import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { db, storage } from './firebase.js';
+
+export const MAX_RESOURCE_FILE_BYTES = 20 * 1024 * 1024; // 20MB
 
 const drugsCol = collection(db, 'drugs');
 const resourcesCol = collection(db, 'resources');
@@ -91,8 +94,33 @@ export async function updateResource(id, fields) {
   }
 }
 
-export async function deleteResource(id) {
+export async function deleteResource(id, storagePath) {
   await deleteDoc(doc(resourcesCol, id));
+  if (storagePath) await deleteResourceFile(storagePath);
+}
+
+/* ---------------- RESOURCE FILE UPLOAD (Cloud Storage) ---------------- */
+// 資料のURLの代わりに、PDFファイル自体をアプリ内(Cloud Storage)に保存する。
+// 外部サイトがPDFを強制ダウンロード設定にしていても、Storageのダウンロードリンクは
+// ブラウザのPDFビューアでそのまま開ける。
+export async function uploadResourceFile(drugId, file) {
+  if (file.size > MAX_RESOURCE_FILE_BYTES) {
+    throw new Error('FILE_TOO_LARGE');
+  }
+  const path = `resources/${drugId}/${Date.now()}_${file.name}`;
+  const fileRef = storageRef(storage, path);
+  await uploadBytes(fileRef, file, { contentType: file.type || 'application/pdf' });
+  const url = await getDownloadURL(fileRef);
+  return { url, storagePath: path };
+}
+
+export async function deleteResourceFile(storagePath) {
+  if (!storagePath) return;
+  try {
+    await deleteObject(storageRef(storage, storagePath));
+  } catch (e) {
+    // 既に削除済みなどは無視する
+  }
 }
 
 /* ---------------- PAPER-FROM HISTORY ---------------- */
