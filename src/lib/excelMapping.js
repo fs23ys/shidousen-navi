@@ -1,20 +1,34 @@
-export const DRUG_FIELDS = [
-  { key: 'name', label: '薬剤名', required: true },
-  { key: 'jan', label: 'JANコード', required: false },
-  { key: 'gs1', label: 'GS1コード', required: false },
-  { key: 'yj', label: 'YJコード', required: false },
-  { key: 'category', label: '分類(薬効分類など)', required: false },
-  { key: 'maker', label: 'メーカー名', required: false },
+// 列(Excel上の1列)ごとに、取込先を1つ選ぶ方式のマッピング。
+// 「薬剤名」「YJコード」のような薬剤マスタの項目だけでなく、
+// 「URL(患者さん向け資料)」「URL(医療関係者向け資料)」のような資料(resources)の列も
+// 同じ行の中に複数あってよい形式に対応する(実際の薬局のExcelに合わせた設計)。
+export const COLUMN_TARGETS = [
+  { key: 'none', label: '(使わない)' },
+  { key: 'name', label: '薬剤名' },
+  { key: 'yj', label: 'YJコード' },
+  { key: 'jan', label: 'JANコード' },
+  { key: 'gs1', label: 'GS1コード' },
+  { key: 'category', label: '分類(薬効分類など)' },
+  { key: 'maker', label: 'メーカー名' },
+  { key: 'url_patient', label: 'URL(患者さん向け資料)' },
+  { key: 'url_hcp', label: 'URL(医療関係者向け資料)' },
+  { key: 'memo', label: 'メモ' },
 ];
 
-const KEYWORD_MAP = {
-  name: ['薬品名', '医薬品名', '品名', '製品名', '薬剤名', 'name'],
-  jan: ['janコード', 'jan', 'janコ'],
-  gs1: ['gs1コード', 'gs1'],
-  yj: ['yjコード', 'yj', '個別医薬品コード'],
-  category: ['薬効分類', '分類', '薬効', 'category'],
-  maker: ['メーカー', '製造販売元', '製造元', '会社名', 'maker'],
-};
+// 上から順にチェックし、最初に一致したキーワードの取込先を採用する。
+// 「URL◯_患者向け」のような具体的な列を、単なる「url」というだけの汎用判定より先に判定する。
+const KEYWORD_RULES = [
+  { key: 'name', words: ['薬剤名', '薬品名', '医薬品名', '品名', '製品名'] },
+  { key: 'yj', words: ['yjコード', 'yj'] },
+  { key: 'jan', words: ['janコード', 'jan'] },
+  { key: 'gs1', words: ['gs1コード', 'gs1'] },
+  { key: 'category', words: ['薬効分類', '分類', '薬効'] },
+  { key: 'maker', words: ['メーカー', '製造販売元', '製造元', '会社名'] },
+  { key: 'url_hcp', words: ['医療従事者', '医療関係者', '医療従事', 'hcp'] },
+  { key: 'url_patient', words: ['患者さん向け', '患者向け', '疾患', '患者'] },
+  { key: 'memo', words: ['メモ', '備考', 'memo'] },
+  { key: 'url_patient', words: ['url'] }, // それ以外の「URL」列は患者さん向けと仮定(手動で変更可)
+];
 
 function normalizeHeader(s) {
   return String(s ?? '')
@@ -37,35 +51,75 @@ export async function readExcelFile(file) {
   return { headers, rows: dataRows };
 }
 
-// 列名から各フィールドへの対応を自動推測する。戻り値: { name: 列index|null, jan: ..., ... }
+// 列名から取込先を自動推測する。戻り値: 列indexと同じ長さの配列(各要素はCOLUMN_TARGETSのkey)
 export function guessColumnMapping(headers) {
-  const normalized = headers.map(normalizeHeader);
-  const mapping = {};
-  for (const field of DRUG_FIELDS) {
-    const keywords = KEYWORD_MAP[field.key] || [];
-    let foundIndex = null;
-    for (const kw of keywords) {
-      const idx = normalized.findIndex((h) => h.includes(kw));
-      if (idx !== -1) {
-        foundIndex = idx;
-        break;
-      }
+  return headers.map((h) => {
+    const norm = normalizeHeader(h);
+    for (const rule of KEYWORD_RULES) {
+      if (rule.words.some((w) => norm.includes(w))) return rule.key;
     }
-    mapping[field.key] = foundIndex;
-  }
-  return mapping;
+    return 'none';
+  });
 }
 
-// mapping ({fieldKey: columnIndex|null}) に従って行データを drugs オブジェクトの配列に変換する
-export function rowsToDrugs(rows, mapping) {
-  return rows
-    .map((row) => {
-      const obj = {};
-      for (const field of DRUG_FIELDS) {
-        const idx = mapping[field.key];
-        obj[field.key] = idx == null || idx === -1 ? '' : String(row[idx] ?? '').trim();
-      }
-      return obj;
-    })
-    .filter((d) => d.name); // 薬剤名が空の行は取り込まない
+export function titleFromUrl(url) {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, '');
+    return host + ' の資料';
+  } catch (e) {
+    return '無題の資料';
+  }
+}
+
+// mapping(列indexごとのCOLUMN_TARGETS key)に従って、行データを
+// 薬剤(drugs)と、それに紐づく資料(resources、URL列がある場合のみ)の配列に変換する。
+// 薬剤名の列が空の行は取り込まない。同じ行の複数のURL列はそれぞれ別の資料になる。
+export function buildImportPlan(rows, mapping) {
+  const colsFor = (target) => mapping.reduce((acc, t, i) => (t === target ? [...acc, i] : acc), []);
+  const singleCol = (target) => colsFor(target)[0] ?? null;
+  const cell = (row, idx) => (idx == null ? '' : String(row[idx] ?? '').trim());
+
+  const nameCol = singleCol('name');
+  const yjCol = singleCol('yj');
+  const janCol = singleCol('jan');
+  const gs1Col = singleCol('gs1');
+  const categoryCol = singleCol('category');
+  const makerCol = singleCol('maker');
+  const memoCols = colsFor('memo');
+  const patientUrlCols = colsFor('url_patient');
+  const hcpUrlCols = colsFor('url_hcp');
+
+  const drugs = [];
+  const resources = [];
+
+  rows.forEach((row, rowIdx) => {
+    const name = cell(row, nameCol);
+    if (!name) return;
+    const tempId = `x${rowIdx}`;
+    drugs.push({
+      id: tempId,
+      name,
+      yj: cell(row, yjCol),
+      jan: cell(row, janCol),
+      gs1: cell(row, gs1Col),
+      category: cell(row, categoryCol),
+      maker: cell(row, makerCol),
+    });
+
+    const memo = memoCols
+      .map((c) => cell(row, c))
+      .filter(Boolean)
+      .join(' / ');
+
+    patientUrlCols.forEach((c) => {
+      const url = cell(row, c);
+      if (url) resources.push({ tempDrugId: tempId, type: 'web', url, audience: 'patient', memo });
+    });
+    hcpUrlCols.forEach((c) => {
+      const url = cell(row, c);
+      if (url) resources.push({ tempDrugId: tempId, type: 'web', url, audience: 'hcp', memo });
+    });
+  });
+
+  return { drugs, resources };
 }

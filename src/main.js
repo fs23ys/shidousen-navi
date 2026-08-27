@@ -22,7 +22,7 @@ import {
   planSiteMerge,
   planPaperFromHistoryMerge,
 } from './lib/merge.js';
-import { readExcelFile, guessColumnMapping, rowsToDrugs, DRUG_FIELDS } from './lib/excelMapping.js';
+import { readExcelFile, guessColumnMapping, buildImportPlan, titleFromUrl, COLUMN_TARGETS } from './lib/excelMapping.js';
 import { downloadJson, readJsonFile } from './lib/backup.js';
 
 /* ---------------- STATE ---------------- */
@@ -460,23 +460,20 @@ excelFileInput.addEventListener('change', async (e) => {
 
 function renderExcelMapping() {
   const { headers, mapping } = excelState;
-  excelMapBody.innerHTML = DRUG_FIELDS.map((f) => {
-    const options = [`<option value="">(なし)</option>`]
-      .concat(
-        headers.map(
-          (h, i) => `<option value="${i}" ${mapping[f.key] === i ? 'selected' : ''}>${escapeHtml(h || '(無題の列' + (i + 1) + ')')}</option>`,
-        ),
-      )
-      .join('');
-    return `<tr>
-      <td>${escapeHtml(f.label)}${f.required ? '<span style="color:var(--danger)"> *</span>' : ''}</td>
-      <td><select data-field="${f.key}">${options}</select></td>
-    </tr>`;
-  }).join('');
+  excelMapBody.innerHTML = headers
+    .map((h, i) => {
+      const options = COLUMN_TARGETS.map(
+        (t) => `<option value="${t.key}" ${mapping[i] === t.key ? 'selected' : ''}>${escapeHtml(t.label)}</option>`,
+      ).join('');
+      return `<tr>
+        <td>${escapeHtml(h || '(無題の列' + (i + 1) + ')')}</td>
+        <td><select data-col="${i}">${options}</select></td>
+      </tr>`;
+    })
+    .join('');
   excelMapBody.querySelectorAll('select').forEach((sel) => {
     sel.addEventListener('change', () => {
-      const v = sel.value;
-      excelState.mapping[sel.dataset.field] = v === '' ? null : Number(v);
+      excelState.mapping[Number(sel.dataset.col)] = sel.value;
       renderExcelPreview();
     });
   });
@@ -485,15 +482,19 @@ function renderExcelMapping() {
 
 function renderExcelPreview() {
   const { rows, mapping } = excelState;
-  const previewDrugs = rowsToDrugs(rows.slice(0, 5), mapping);
-  if (previewDrugs.length === 0) {
+  const { drugs: sampleDrugs, resources: sampleResources } = buildImportPlan(rows.slice(0, 5), mapping);
+  if (sampleDrugs.length === 0) {
     excelPreview.innerHTML = `<div style="padding:8px;">プレビューできる行がありません(薬剤名の列を選んでください)</div>`;
     return;
   }
   excelPreview.innerHTML = `<table>
-    <thead><tr>${DRUG_FIELDS.map((f) => `<th>${escapeHtml(f.label)}</th>`).join('')}</tr></thead>
-    <tbody>${previewDrugs
-      .map((d) => `<tr>${DRUG_FIELDS.map((f) => `<td>${escapeHtml(d[f.key] || '')}</td>`).join('')}</tr>`)
+    <thead><tr><th>薬剤名</th><th>YJコード</th><th>資料</th><th>メモ</th></tr></thead>
+    <tbody>${sampleDrugs
+      .map((d) => {
+        const res = sampleResources.filter((r) => r.tempDrugId === d.id);
+        const resSummary = res.length === 0 ? '—' : res.map((r) => (r.audience === 'patient' ? '患者向け' : '医療向け')).join(' / ');
+        return `<tr><td>${escapeHtml(d.name)}</td><td>${escapeHtml(d.yj || '')}</td><td>${escapeHtml(resSummary)}</td><td>${escapeHtml(res[0]?.memo || '')}</td></tr>`;
+      })
       .join('')}</tbody>
   </table>`;
 }
@@ -504,7 +505,7 @@ document.getElementById('excelCancelBtn').addEventListener('click', () => {
 });
 
 document.getElementById('excelImportBtn').addEventListener('click', async () => {
-  if (!excelState || excelState.mapping.name == null) {
+  if (!excelState || !excelState.mapping.includes('name')) {
     showToast('薬剤名の列を選んでください');
     return;
   }
@@ -512,11 +513,28 @@ document.getElementById('excelImportBtn').addEventListener('click', async () => 
   importBtn.disabled = true;
   importBtn.innerHTML = `<span class="spinner-inline"></span>取り込み中…`;
   try {
-    const incoming = rowsToDrugs(excelState.rows, excelState.mapping).map((d, i) => ({ ...d, id: `x${i}` }));
-    const { toAdd } = planDrugMerge(drugs, incoming);
-    if (toAdd.length > 0) await addDrugsBatch(toAdd);
+    const { drugs: incomingDrugs, resources: incomingResources } = buildImportPlan(excelState.rows, excelState.mapping);
+
+    const drugPlan = planDrugMerge(drugs, incomingDrugs);
+    const newDrugIds = drugPlan.toAdd.length > 0 ? await addDrugsBatch(drugPlan.toAdd) : [];
+    const drugIdMap = drugPlan.resolveIds(newDrugIds);
+
+    // 資料側はドメインが同じでもtype・タイトル・URLが完全一致した場合のみ重複とみなす(4.8のマージ方式と共通)
+    const seenKeys = new Set(resources.map((r) => `${r.drugId}|${r.type}|${r.title}|${r.url}`));
+    const resourcesToAdd = [];
+    incomingResources.forEach((r) => {
+      const localDrugId = drugIdMap.get(r.tempDrugId);
+      if (!localDrugId) return;
+      const title = titleFromUrl(r.url);
+      const key = `${localDrugId}|web|${title}|${r.url}`;
+      if (seenKeys.has(key)) return;
+      seenKeys.add(key);
+      resourcesToAdd.push({ drugId: localDrugId, type: 'web', url: r.url, audience: r.audience, memo: r.memo || '', title });
+    });
+    if (resourcesToAdd.length > 0) await addResourcesBatch(resourcesToAdd);
+
     excelModal.classList.remove('open');
-    showToast(`Excelから${toAdd.length}件の薬剤を取り込みました(${incoming.length - toAdd.length}件は重複のためスキップ)`);
+    showToast(`Excelから薬剤+${drugPlan.toAdd.length}件、資料+${resourcesToAdd.length}件を取り込みました`);
     excelState = null;
   } catch (err) {
     showToast('取り込みに失敗しました。通信状況をご確認ください');
