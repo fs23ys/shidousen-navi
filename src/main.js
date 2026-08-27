@@ -128,12 +128,14 @@ document.addEventListener('click', (e) => {
   if (!e.target.closest('.search-zone')) suggestList.classList.remove('open');
 });
 
+const jaCollator = new Intl.Collator('ja');
+
 function renderSuggestions() {
   const qRaw = drugInput.value.trim();
   const q = toSearchKey(qRaw);
-  const matches = drugs.filter(
-    (d) => q === '' ? true : toSearchKey(d.name).includes(q) || toSearchKey(d.category).includes(q),
-  );
+  const matches = drugs
+    .filter((d) => (q === '' ? true : toSearchKey(d.name).includes(q) || toSearchKey(d.category).includes(q)))
+    .sort((a, b) => jaCollator.compare(a.name, b.name));
   if (matches.length === 0) {
     suggestList.innerHTML = `<div class="suggest-empty">一致する採用薬が見つかりません</div>`;
   } else {
