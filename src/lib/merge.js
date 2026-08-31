@@ -42,7 +42,11 @@ export function planDrugMerge(existingDrugs, incomingDrugs) {
     }
 
     const idx = toAdd.length;
-    toAdd.push(d);
+    // d.id は取込時の一時的な行番号ベースのidであり、Firestoreの実ドキュメントIDではない。
+    // そのままFirestoreに書き込むと"id"という名前のフィールドとしてデータに残ってしまい、
+    // 読み込み時に本物のドキュメントIDを上書きしてしまう不具合の原因になるため、必ず取り除く。
+    const { id: _tempId, ...cleanDrug } = d;
+    toAdd.push(cleanDrug);
     addIndexByImportedId.set(d.id, idx);
     if (d.yj) yjToAddIndex.set(d.yj, idx);
     if (d.name) nameToAddIndex.set(d.name, idx);
@@ -111,7 +115,11 @@ export function planDrugSync(existingDrugs, incomingDrugs) {
     }
 
     const idx = toAdd.length;
-    toAdd.push(d);
+    // d.id は取込時の一時的な行番号ベースのidであり、Firestoreの実ドキュメントIDではない。
+    // そのままFirestoreに書き込むと"id"という名前のフィールドとしてデータに残ってしまい、
+    // 読み込み時に本物のドキュメントIDを上書きしてしまう不具合の原因になるため、必ず取り除く。
+    const { id: _tempId, ...cleanDrug } = d;
+    toAdd.push(cleanDrug);
     addIndexByImportedId.set(d.id, idx);
     if (d.yj) yjToAddIndex.set(d.yj, idx);
     if (d.name) nameToAddIndex.set(d.name, idx);

@@ -51,13 +51,19 @@ function toUpdatePayload(obj) {
 /* ---------------- SUBSCRIPTIONS ---------------- */
 export function subscribeDrugs(cb) {
   return onSnapshot(drugsCol, (snap) => {
-    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    // d.data()側に(過去の不具合で)"id"という名前のフィールドが紛れ込んでいる場合、
+    // オブジェクトの後ろに書いた方が勝つ仕様上、実際のFirestoreドキュメントIDを
+    // 必ず後ろに置いて上書きされないようにする(前に置くと偽のidに乗っ取られてしまう)。
+    cb(snap.docs.map((d) => ({ ...d.data(), id: d.id })));
   });
 }
 
 export function subscribeResources(cb) {
   return onSnapshot(resourcesCol, (snap) => {
-    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    // d.data()側に(過去の不具合で)"id"という名前のフィールドが紛れ込んでいる場合、
+    // オブジェクトの後ろに書いた方が勝つ仕様上、実際のFirestoreドキュメントIDを
+    // 必ず後ろに置いて上書きされないようにする(前に置くと偽のidに乗っ取られてしまう)。
+    cb(snap.docs.map((d) => ({ ...d.data(), id: d.id })));
   });
 }
 
@@ -75,7 +81,10 @@ export function subscribeSites(cb) {
       }
       return; // onSnapshot will fire again once with the seeded docs
     }
-    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    // d.data()側に(過去の不具合で)"id"という名前のフィールドが紛れ込んでいる場合、
+    // オブジェクトの後ろに書いた方が勝つ仕様上、実際のFirestoreドキュメントIDを
+    // 必ず後ろに置いて上書きされないようにする(前に置くと偽のidに乗っ取られてしまう)。
+    cb(snap.docs.map((d) => ({ ...d.data(), id: d.id })));
   });
 }
 
@@ -218,7 +227,10 @@ export function updateResourcesBatch(updates) {
 export function subscribeHistory(cb) {
   const q = query(historyCol, orderBy('at', 'desc'), limit(HISTORY_DISPLAY_LIMIT));
   return onSnapshot(q, (snap) => {
-    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    // d.data()側に(過去の不具合で)"id"という名前のフィールドが紛れ込んでいる場合、
+    // オブジェクトの後ろに書いた方が勝つ仕様上、実際のFirestoreドキュメントIDを
+    // 必ず後ろに置いて上書きされないようにする(前に置くと偽のidに乗っ取られてしまう)。
+    cb(snap.docs.map((d) => ({ ...d.data(), id: d.id })));
   });
 }
 
