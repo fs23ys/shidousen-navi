@@ -846,8 +846,8 @@ document.getElementById('excelImportBtn').addEventListener('click', async () => 
       seenKeys.add(key);
       const existing = existingByKey.get(key);
       if (existing) {
-        if (existing.title !== title || (existing.memo || '') !== memo) {
-          resourcesToUpdate.push({ id: existing.id, fields: { title, memo } });
+        if (existing.title !== title || (existing.memo || '') !== memo || existing.audience !== r.audience) {
+          resourcesToUpdate.push({ id: existing.id, fields: { title, memo, audience: r.audience } });
         }
         return;
       }

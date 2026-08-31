@@ -23,7 +23,9 @@ export const MAX_RESOURCE_FILE_BYTES = 20 * 1024 * 1024; // 20MB
 const drugsCol = collection(db, 'drugs');
 const resourcesCol = collection(db, 'resources');
 const sitesCol = collection(db, 'sites');
+const historyCol = collection(db, 'history');
 const metaDoc = doc(db, 'meta', 'paperFromHistory');
+const HISTORY_DISPLAY_LIMIT = 100;
 
 const REQUIRED_SITES = [
   { name: 'くすりのしおり', domain: 'rad-ar.or.jp', required: true },
@@ -209,4 +211,22 @@ export function updateResourcesBatch(updates) {
       await batch.commit();
     }
   })();
+}
+
+/* ---------------- 閲覧・印刷履歴 ---------------- */
+// 資料を開く/拡大表示する/印刷するたびに1件記録する。表示は直近HISTORY_DISPLAY_LIMIT件のみ。
+export function subscribeHistory(cb) {
+  const q = query(historyCol, orderBy('at', 'desc'), limit(HISTORY_DISPLAY_LIMIT));
+  return onSnapshot(q, (snap) => {
+    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  });
+}
+
+export async function addHistoryEntry(fields) {
+  await addDoc(historyCol, { ...stripUndefined(fields), at: serverTimestamp() });
+}
+
+export async function clearHistory() {
+  const snap = await getDocs(query(historyCol, limit(2000)));
+  await batchDeleteAll(historyCol, snap.docs.map((d) => d.id));
 }
