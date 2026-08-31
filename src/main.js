@@ -829,7 +829,8 @@ document.getElementById('excelImportBtn').addEventListener('click', async () => 
     );
     excelState = null;
   } catch (err) {
-    showToast('取り込みに失敗しました。通信状況をご確認ください');
+    console.error('Excel取込エラー:', err);
+    showToast(`取り込みに失敗しました: ${err && err.message ? err.message : err}`);
   } finally {
     importBtn.disabled = false;
     importBtn.textContent = 'この内容で取り込む';
