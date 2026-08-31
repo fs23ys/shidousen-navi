@@ -48,7 +48,8 @@ const TYPE_META = {
 };
 const AUDIENCE_META = {
   patient: { label: '患者さん向け', color: '#4F8D77', tint: '#DCF3E7' },
-  hcp: { label: '医療関係者向け', color: '#B8942E', tint: '#FBF3D8' },
+  hcp: { label: '医療関係者向け', color: '#E0A86E', tint: '#FBEBD8' },
+  disease: { label: '疾患向け', color: '#E0A86E', tint: '#FBEBD8' },
 };
 
 /* ---------------- AUTH ---------------- */
@@ -531,13 +532,19 @@ function renderExcelPreview() {
     excelPreview.innerHTML = `<div style="padding:8px;">プレビューできる行がありません(薬剤名の列を選んでください)</div>`;
     return;
   }
+  const AUD_LABEL = { patient: '患者向け', hcp: '医療向け', disease: '疾患向け' };
   excelPreview.innerHTML = `<table>
-    <thead><tr><th>薬剤名</th><th>YJコード</th><th>資料</th><th>メモ</th></tr></thead>
+    <thead><tr><th>薬剤名</th><th>YJコード</th><th>資料(対象:タイトル)</th></tr></thead>
     <tbody>${sampleDrugs
       .map((d) => {
         const res = sampleResources.filter((r) => r.tempDrugId === d.id);
-        const resSummary = res.length === 0 ? '—' : res.map((r) => (r.audience === 'patient' ? '患者向け' : '医療向け')).join(' / ');
-        return `<tr><td>${escapeHtml(d.name)}</td><td>${escapeHtml(d.yj || '')}</td><td>${escapeHtml(resSummary)}</td><td>${escapeHtml(res[0]?.memo || '')}</td></tr>`;
+        const resSummary =
+          res.length === 0
+            ? '—'
+            : res
+                .map((r) => `${AUD_LABEL[r.audience] || r.audience}:${escapeHtml(r.title || '(無題)')}`)
+                .join('<br>');
+        return `<tr><td>${escapeHtml(d.name)}</td><td>${escapeHtml(d.yj || '')}</td><td>${resSummary}</td></tr>`;
       })
       .join('')}</tbody>
   </table>`;
@@ -569,7 +576,7 @@ document.getElementById('excelImportBtn').addEventListener('click', async () => 
     incomingResources.forEach((r) => {
       const localDrugId = drugIdMap.get(r.tempDrugId);
       if (!localDrugId) return;
-      const title = titleFromUrl(r.url);
+      const title = (r.title && r.title.trim()) || titleFromUrl(r.url);
       const key = `${localDrugId}|web|${title}|${r.url}`;
       if (seenKeys.has(key)) return;
       seenKeys.add(key);

@@ -5,8 +5,10 @@
 // 戻り値: { toAdd: 新規追加する薬剤の配列, resolveId: (importedId) => 既存またはtoAdd内のローカルidを返す関数 }
 export function planDrugMerge(existingDrugs, incomingDrugs) {
   const toAdd = [];
-  const resolvedByImportedId = new Map(); // incoming id -> existing local id (新規分はnull仮置き)
+  const resolvedByImportedId = new Map(); // incoming id ->既存の薬のローカルid
   const addIndexByImportedId = new Map(); // incoming id -> toAdd配列内のindex(新規分のみ)
+  const yjToAddIndex = new Map(); // 同じ取込バッチ内で、既にtoAdd登録予定になっているYJコード/薬剤名
+  const nameToAddIndex = new Map();
 
   incomingDrugs.forEach((d) => {
     let existing = null;
@@ -14,10 +16,25 @@ export function planDrugMerge(existingDrugs, incomingDrugs) {
     if (!existing && d.name) existing = existingDrugs.find((x) => x.name === d.name);
     if (existing) {
       resolvedByImportedId.set(d.id, existing.id);
-    } else {
-      addIndexByImportedId.set(d.id, toAdd.length);
-      toAdd.push(d);
+      return;
     }
+
+    // 同じ薬が複数行に分けて書かれている場合(例:同じ薬の資料を行を増やして記入)、
+    // このバッチ内で既に追加予定になっている同じ薬があればそれと同じ扱いにする(二重登録を防ぐ)。
+    let pendingIndex = null;
+    if (d.yj && yjToAddIndex.has(d.yj)) pendingIndex = yjToAddIndex.get(d.yj);
+    if (pendingIndex == null && d.name && nameToAddIndex.has(d.name)) pendingIndex = nameToAddIndex.get(d.name);
+
+    if (pendingIndex != null) {
+      addIndexByImportedId.set(d.id, pendingIndex);
+      return;
+    }
+
+    const idx = toAdd.length;
+    toAdd.push(d);
+    addIndexByImportedId.set(d.id, idx);
+    if (d.yj) yjToAddIndex.set(d.yj, idx);
+    if (d.name) nameToAddIndex.set(d.name, idx);
   });
 
   return {
