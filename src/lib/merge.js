@@ -50,6 +50,67 @@ export function planDrugMerge(existingDrugs, incomingDrugs) {
   };
 }
 
+// 採用医薬品リストの完全同期(Excel再取込用)。
+// マージ(追加のみ)とは異なり、最新の取込内容に薬剤一覧を合わせる:
+// 新規は追加、既存と一致するもの(YJコード優先、なければ薬剤名)は内容を最新の値に更新、
+// 取込内容に存在しない既存の薬は削除対象として返す(実際の削除は呼び出し側が確認の上で行う)。
+export function planDrugSync(existingDrugs, incomingDrugs) {
+  const toAdd = [];
+  const toUpdate = []; // { id, fields }
+  const resolvedByImportedId = new Map();
+  const addIndexByImportedId = new Map();
+  const yjToAddIndex = new Map();
+  const nameToAddIndex = new Map();
+  const matchedExistingIds = new Set();
+  const updatedExistingIds = new Set();
+
+  incomingDrugs.forEach((d) => {
+    let existing = null;
+    if (d.yj) existing = existingDrugs.find((x) => x.yj && x.yj === d.yj);
+    if (!existing && d.name) existing = existingDrugs.find((x) => x.name === d.name);
+    if (existing) {
+      resolvedByImportedId.set(d.id, existing.id);
+      matchedExistingIds.add(existing.id);
+      // 同じ薬が複数行にまたがる場合は、最初の行の内容を採用する(2行目以降は資料の追加行のことが多いため)
+      if (!updatedExistingIds.has(existing.id)) {
+        updatedExistingIds.add(existing.id);
+        const { id, ...fields } = d;
+        toUpdate.push({ id: existing.id, fields });
+      }
+      return;
+    }
+
+    let pendingIndex = null;
+    if (d.yj && yjToAddIndex.has(d.yj)) pendingIndex = yjToAddIndex.get(d.yj);
+    if (pendingIndex == null && d.name && nameToAddIndex.has(d.name)) pendingIndex = nameToAddIndex.get(d.name);
+    if (pendingIndex != null) {
+      addIndexByImportedId.set(d.id, pendingIndex);
+      return;
+    }
+
+    const idx = toAdd.length;
+    toAdd.push(d);
+    addIndexByImportedId.set(d.id, idx);
+    if (d.yj) yjToAddIndex.set(d.yj, idx);
+    if (d.name) nameToAddIndex.set(d.name, idx);
+  });
+
+  const toDelete = existingDrugs.filter((x) => !matchedExistingIds.has(x.id));
+
+  return {
+    toAdd,
+    toUpdate,
+    toDelete,
+    resolveIds(newIds) {
+      const map = new Map(resolvedByImportedId);
+      addIndexByImportedId.forEach((idx, importedId) => {
+        map.set(importedId, newIds[idx]);
+      });
+      return map;
+    },
+  };
+}
+
 // 資料:同じ薬・同じ種類・同じタイトル・同じURL(またはtype='paper'なら取り寄せ先)なら重複とみなしスキップ。
 export function planResourceMerge(existingResources, incomingResources, drugIdMap) {
   const toAdd = [];

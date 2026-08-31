@@ -163,3 +163,32 @@ export function addResourcesBatch(resourceList) {
 export function addSitesBatch(siteList) {
   return batchAddAll(sitesCol, siteList);
 }
+
+/* ---------------- BATCH UPDATE / DELETE (採用医薬品リストの完全同期用) ---------------- */
+async function batchDeleteAll(col, ids) {
+  for (let i = 0; i < ids.length; i += 400) {
+    const chunk = ids.slice(i, i + 400);
+    const batch = writeBatch(db);
+    chunk.forEach((id) => batch.delete(doc(col, id)));
+    await batch.commit();
+  }
+}
+
+export function updateDrugsBatch(updates) {
+  return (async () => {
+    for (let i = 0; i < updates.length; i += 400) {
+      const chunk = updates.slice(i, i + 400);
+      const batch = writeBatch(db);
+      chunk.forEach(({ id, fields }) => batch.update(doc(drugsCol, id), stripUndefined(fields)));
+      await batch.commit();
+    }
+  })();
+}
+
+export function deleteDrugsBatch(ids) {
+  return batchDeleteAll(drugsCol, ids);
+}
+
+export function deleteResourcesBatch(ids) {
+  return batchDeleteAll(resourcesCol, ids);
+}

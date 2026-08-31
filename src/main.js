@@ -15,12 +15,16 @@ import {
   uploadResourceFile,
   deleteResourceFile,
   MAX_RESOURCE_FILE_BYTES,
+  updateDrugsBatch,
+  deleteDrugsBatch,
+  deleteResourcesBatch,
 } from './store.js';
 import { toSearchKey } from './lib/searchKey.js';
 import { fetchSioriId, sioriDirectUrl } from './lib/siori.js';
 import { buildSiteSearchUrl } from './lib/siteSearch.js';
 import {
   planDrugMerge,
+  planDrugSync,
   planResourceMerge,
   planSiteMerge,
   planPaperFromHistoryMerge,
@@ -73,6 +77,22 @@ googleSignInBtn.addEventListener('click', async () => {
 logoutBtn.addEventListener('click', () => {
   signOut();
 });
+
+/* ---------------- HAMBURGER MENU / DRAWER ---------------- */
+const drawer = document.getElementById('drawer');
+const drawerOverlay = document.getElementById('drawerOverlay');
+
+function openDrawer() {
+  drawer.classList.add('open');
+  drawerOverlay.classList.add('open');
+}
+function closeDrawer() {
+  drawer.classList.remove('open');
+  drawerOverlay.classList.remove('open');
+}
+document.getElementById('menuBtn').addEventListener('click', openDrawer);
+document.getElementById('drawerCloseBtn').addEventListener('click', closeDrawer);
+drawerOverlay.addEventListener('click', closeDrawer);
 
 watchAuth((user) => {
   if (user) {
@@ -560,17 +580,45 @@ document.getElementById('excelImportBtn').addEventListener('click', async () => 
     showToast('薬剤名の列を選んでください');
     return;
   }
+  const { drugs: incomingDrugs, resources: incomingResources } = buildImportPlan(excelState.rows, excelState.mapping);
+
+  // 採用医薬品リストは「完全同期」:最新の取込内容に薬剤一覧を合わせる。
+  // 取込内容にない既存の薬は削除し、その薬に紐づく登録済み資料も一緒に削除する。
+  const drugPlan = planDrugSync(drugs, incomingDrugs);
+  const drugsToDeleteResourceCount = drugPlan.toDelete.reduce(
+    (sum, d) => sum + resources.filter((r) => r.drugId === d.id).length,
+    0,
+  );
+
+  const confirmMsg =
+    `薬剤: 追加${drugPlan.toAdd.length}件・更新${drugPlan.toUpdate.length}件・削除${drugPlan.toDelete.length}件\n` +
+    (drugPlan.toDelete.length > 0 ? `(削除される薬剤に紐づく資料も${drugsToDeleteResourceCount}件削除されます)\n` : '') +
+    `この内容で採用医薬品リストを更新しますか?`;
+  if (!window.confirm(confirmMsg)) return;
+
   const importBtn = document.getElementById('excelImportBtn');
   importBtn.disabled = true;
   importBtn.innerHTML = `<span class="spinner-inline"></span>取り込み中…`;
   try {
-    const { drugs: incomingDrugs, resources: incomingResources } = buildImportPlan(excelState.rows, excelState.mapping);
-
-    const drugPlan = planDrugMerge(drugs, incomingDrugs);
     const newDrugIds = drugPlan.toAdd.length > 0 ? await addDrugsBatch(drugPlan.toAdd) : [];
+    if (drugPlan.toUpdate.length > 0) await updateDrugsBatch(drugPlan.toUpdate);
     const drugIdMap = drugPlan.resolveIds(newDrugIds);
 
-    // 資料側はドメインが同じでもtype・タイトル・URLが完全一致した場合のみ重複とみなす(4.8のマージ方式と共通)
+    // 削除される薬に紐づく資料と、アップロード済みPDFファイルを削除する
+    const deleteDrugIds = drugPlan.toDelete.map((d) => d.id);
+    if (deleteDrugIds.length > 0) {
+      const resourcesToDelete = resources.filter((r) => deleteDrugIds.includes(r.drugId));
+      await Promise.all(resourcesToDelete.filter((r) => r.storagePath).map((r) => deleteResourceFile(r.storagePath)));
+      if (resourcesToDelete.length > 0) await deleteResourcesBatch(resourcesToDelete.map((r) => r.id));
+      await deleteDrugsBatch(deleteDrugIds);
+      if (deleteDrugIds.includes(selectedDrugId)) {
+        selectedDrugId = null;
+        document.getElementById('resultZone').classList.remove('open');
+        document.getElementById('emptyHero').style.display = 'block';
+      }
+    }
+
+    // 資料側(Excelの資料列から来たもの)はドメインが同じでもtype・タイトル・URLが完全一致した場合のみ重複とみなす(4.8のマージ方式と共通)
     const seenKeys = new Set(resources.map((r) => `${r.drugId}|${r.type}|${r.title}|${r.url}`));
     const resourcesToAdd = [];
     incomingResources.forEach((r) => {
@@ -585,7 +633,9 @@ document.getElementById('excelImportBtn').addEventListener('click', async () => 
     if (resourcesToAdd.length > 0) await addResourcesBatch(resourcesToAdd);
 
     excelModal.classList.remove('open');
-    showToast(`Excelから薬剤+${drugPlan.toAdd.length}件、資料+${resourcesToAdd.length}件を取り込みました`);
+    showToast(
+      `採用医薬品リストを更新しました:追加${drugPlan.toAdd.length}件・更新${drugPlan.toUpdate.length}件・削除${drugPlan.toDelete.length}件、資料+${resourcesToAdd.length}件`,
+    );
     excelState = null;
   } catch (err) {
     showToast('取り込みに失敗しました。通信状況をご確認ください');
