@@ -140,61 +140,59 @@
 <svg viewBox="0 0 40 62" class="floral floral-fixed" style="width:26px; height:40px; bottom:16px; left:20px; color:var(--pastel-yellow); transform:rotate(-4deg);"><use href="#fl-flower-stem"/></svg>
 <svg viewBox="0 0 40 24" class="floral floral-fixed" style="width:26px; height:16px; bottom:14px; left:64px; color:var(--sage); transform:rotate(14deg);"><use href="#fl-leaf"/></svg>
 
-<main>
-  <div class="search-zone">
-    <span class="search-label">医薬品名で検索</span>
-    <div class="search-box">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-      <input id="drugInput" type="text" placeholder="採用薬から検索(例:アムロジピン、ロキソプロフェン…)" autocomplete="off">
-      <span class="search-count mono" id="drugTotalCount"></span>
-    </div>
-    <div class="suggest-list" id="suggestList"></div>
-  </div>
-
-  <div class="empty-hero" id="emptyHero">
-    <svg viewBox="0 0 40 24" class="floral" style="width:30px; height:18px; top:-6px; left:24%; color:var(--sage); transform:rotate(-12deg);"><use href="#fl-leaf"/></svg>
-    <svg viewBox="0 0 16 24" class="floral" style="width:20px; height:30px; bottom:10px; right:26%; color:var(--amber); transform:rotate(10deg);"><use href="#fl-bud"/></svg>
-    <svg viewBox="0 0 40 40" class="floral" style="width:24px; height:24px; top:14px; right:20%; color:var(--clay); transform:rotate(8deg);"><use href="#fl-flower2"/></svg>
-    <div class="glyph">🔍</div>
-    <h2>薬剤名を入力してください</h2>
-    <p>採用医薬品リストの中から検索します。選択すると、登録済みの指導せんと、検索できるサイト一覧が表示されます。</p>
-  </div>
-
-  <div id="resultZone">
-    <div class="selected-bar">
-      <div>
-        <div class="eyebrow">選択中の医薬品</div>
-        <h2 id="selDrugName">—</h2>
-        <div class="code mono" id="selDrugCode">—</div>
-        <div class="code-list mono" id="selDrugCodes"></div>
+<main class="layout">
+  <!-- 左カラム:検索 + 検索結果リスト(常時表示) + サイトでさがす -->
+  <aside class="left-col">
+    <div class="search-zone">
+      <span class="search-label">医薬品名で検索</span>
+      <div class="search-box">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="drugInput" type="text" placeholder="採用薬から検索(例:アムロジピン、ロキソプロフェン…)" autocomplete="off">
+        <span class="search-count mono" id="drugTotalCount"></span>
       </div>
     </div>
+    <div class="suggest-panel" id="suggestList"></div>
 
-    <div class="cols">
-      <!-- site search links -->
-      <div>
-        <div class="panel-head">
-          <div class="panel-title">サイトでさがす <span class="n" id="siteCount">0</span></div>
-        </div>
-        <div id="siteList"></div>
-      </div>
-
-      <!-- registered resources -->
-      <div>
-        <div class="panel-head">
-          <div class="panel-title">登録済み資料 <span class="n" id="resCount">0</span></div>
-          <button class="add-link" id="openAddModalBtn">＋ 資料を追加</button>
-        </div>
-        <div class="audience-filter" id="audienceFilter">
-          <button class="active" data-aud="all">すべて</button>
-          <button data-aud="patient">患者さん向けのみ</button>
-          <button data-aud="hcp">医療関係者向けのみ</button>
-          <button data-aud="disease">疾患向けのみ</button>
-        </div>
-        <div id="resList"></div>
-      </div>
+    <div class="panel-head" style="margin-top:22px;">
+      <div class="panel-title">サイトでさがす <span class="n" id="siteCount">0</span></div>
     </div>
-  </div>
+    <div id="siteList"></div>
+  </aside>
+
+  <!-- 右カラム:選択中の医薬品 + 登録済み資料(メインエリア) -->
+  <section class="right-col">
+    <div class="empty-hero" id="emptyHero">
+      <svg viewBox="0 0 40 24" class="floral" style="width:30px; height:18px; top:-6px; left:24%; color:var(--sage); transform:rotate(-12deg);"><use href="#fl-leaf"/></svg>
+      <svg viewBox="0 0 16 24" class="floral" style="width:20px; height:30px; bottom:10px; right:26%; color:var(--amber); transform:rotate(10deg);"><use href="#fl-bud"/></svg>
+      <svg viewBox="0 0 40 40" class="floral" style="width:24px; height:24px; top:14px; right:20%; color:var(--clay); transform:rotate(8deg);"><use href="#fl-flower2"/></svg>
+      <div class="glyph">🔍</div>
+      <h2>薬剤名を入力してください</h2>
+      <p>左のリストから薬剤を選択すると、登録済みの指導せんと、検索できるサイト一覧が表示されます。</p>
+    </div>
+
+    <div id="resultZone">
+      <div class="selected-bar">
+        <div>
+          <div class="eyebrow">選択中の医薬品</div>
+          <h2 id="selDrugName">—</h2>
+          <div class="code mono" id="selDrugCode">—</div>
+          <div class="code-list mono" id="selDrugCodes"></div>
+        </div>
+      </div>
+
+      <div class="panel-head">
+        <div class="panel-title">登録済み資料 <span class="n" id="resCount">0</span></div>
+        <button class="add-link" id="openAddModalBtn">＋ 資料を追加</button>
+      </div>
+      <div class="audience-filter" id="audienceFilter">
+        <button class="active" data-aud="all">すべて</button>
+        <button data-aud="patient">患者さん向けのみ</button>
+        <button data-aud="hcp">医療関係者向けのみ</button>
+        <button data-aud="disease">疾患向けのみ</button>
+      </div>
+      <div id="resList"></div>
+    </div>
+  </section>
 </main>
 
 <!-- ADD RESOURCE MODAL -->
@@ -273,6 +271,19 @@
         <button class="btn-save" id="excelImportBtn">この内容で取り込む</button>
       </div>
       <p class="import-summary" id="excelSummary"></p>
+    </div>
+  </div>
+</div>
+
+<!-- PREVIEW MODAL(資料の拡大表示) -->
+<div class="modal-overlay" id="previewModal">
+  <div class="modal modal-wide" style="max-width:840px;">
+    <div class="modal-head" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:12px;">
+      <h3 class="display" style="margin:0;">拡大表示</h3>
+      <button class="drawer-close" id="previewCloseBtn" aria-label="閉じる">✕</button>
+    </div>
+    <div style="padding:0 24px 24px;">
+      <iframe id="previewFrame" src="about:blank" style="width:100%; height:78vh; border:1.5px solid var(--line); border-radius:var(--radius-sm); display:block; background:#fff;"></iframe>
     </div>
   </div>
 </div>

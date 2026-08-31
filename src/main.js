@@ -111,13 +111,13 @@ function startSubscriptions() {
       drugs = list;
       document.getElementById('drugTotalCount').textContent = drugs.length + '件';
       document.getElementById('drugManageCount').textContent = ' ' + drugs.length;
-      if (document.getElementById('suggestList').classList.contains('open')) renderSuggestions();
+      renderSuggestions();
       if (selectedDrugId) renderSelection();
     }),
     subscribeResources((list) => {
       resources = list;
       if (selectedDrugId) renderResources();
-      if (document.getElementById('suggestList').classList.contains('open')) renderSuggestions();
+      renderSuggestions();
     }),
     subscribeSites((list) => {
       sites = list;
@@ -147,13 +147,10 @@ const drugInput = document.getElementById('drugInput');
 const suggestList = document.getElementById('suggestList');
 
 drugInput.addEventListener('input', renderSuggestions);
-drugInput.addEventListener('focus', renderSuggestions);
-document.addEventListener('click', (e) => {
-  if (!e.target.closest('.search-zone')) suggestList.classList.remove('open');
-});
 
 const jaCollator = new Intl.Collator('ja');
 
+// 検索結果リストは常時表示(左カラムに固定)。入力が空なら採用薬全件を五十音順で一覧表示する。
 function renderSuggestions() {
   const qRaw = drugInput.value.trim();
   const q = toSearchKey(qRaw);
@@ -164,10 +161,10 @@ function renderSuggestions() {
     suggestList.innerHTML = `<div class="suggest-empty">一致する採用薬が見つかりません</div>`;
   } else {
     suggestList.innerHTML = matches
-      .slice(0, 8)
+      .slice(0, 50)
       .map((d) => {
         const cnt = resources.filter((r) => r.drugId === d.id).length;
-        return `<div class="suggest-item" data-id="${d.id}">
+        return `<div class="suggest-item ${d.id === selectedDrugId ? 'active' : ''}" data-id="${d.id}">
           <div>
             <div class="suggest-name">${escapeHtml(d.name)}</div>
             <div class="suggest-meta">${escapeHtml(d.category || '')} · <span class="mono">YJ ${escapeHtml(d.yj || '')}</span></div>
@@ -177,7 +174,6 @@ function renderSuggestions() {
       })
       .join('');
   }
-  suggestList.classList.add('open');
 }
 
 suggestList.addEventListener('click', (e) => {
@@ -187,8 +183,7 @@ suggestList.addEventListener('click', (e) => {
 
 function selectDrug(id) {
   selectedDrugId = id;
-  drugInput.value = '';
-  suggestList.classList.remove('open');
+  renderSuggestions();
   renderSelection();
 }
 
@@ -228,10 +223,15 @@ function renderResources() {
     .map((r) => {
       const meta = TYPE_META[r.type];
       const aud = AUDIENCE_META[r.audience] || AUDIENCE_META.patient;
+      const icon = r.type === 'paper' ? '📮' : r.storagePath ? '📄' : '🌐';
       let detail = '';
       let action = '';
+      let printBtn = '';
+      let previewBtn = '';
       if (r.type === 'web') {
         action = `<a href="${escapeHtml(r.url || '#')}" target="_blank" rel="noopener">開く ↗</a>`;
+        printBtn = `<button data-action="print" data-url="${escapeHtml(r.url || '')}">🖨️ 印刷</button>`;
+        previewBtn = `<button data-action="preview" data-url="${escapeHtml(r.url || '')}">🔍 拡大</button>`;
         if (r.storagePath) {
           detail = `<div class="res-detail">📎 アプリ内に保存したPDF(外部サイトの状態に関わらず開けます)</div>`;
         }
@@ -242,6 +242,7 @@ function renderResources() {
       }
       return `<div class="res-card" style="--tab-color:${meta.color};--tab-tint:${meta.tint}">
         <div class="res-top">
+          <span class="res-icon">${icon}</span>
           <div class="res-title">${escapeHtml(r.title)}</div>
           <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0;">
             <span class="res-type-chip">${meta.label}</span>
@@ -252,6 +253,8 @@ function renderResources() {
         ${r.memo ? `<div class="res-memo">💬 ${escapeHtml(r.memo)}</div>` : ''}
         <div class="res-actions">
           ${action}
+          ${printBtn}
+          ${previewBtn}
           <button data-action="edit" data-id="${r.id}">編集</button>
           <button class="res-del" data-action="delete" data-id="${r.id}">削除</button>
         </div>
@@ -271,6 +274,47 @@ resListEl.addEventListener('click', async (e) => {
     showToast('資料を削除しました');
   }
   if (action === 'copy') copyText(btn.dataset.text);
+  if (action === 'print') printResourceUrl(btn.dataset.url);
+  if (action === 'preview') openPreview(btn.dataset.url);
+});
+
+/* ---------------- PRINT / PREVIEW ---------------- */
+function printResourceUrl(url) {
+  if (!url) return;
+  const win = window.open(url, '_blank');
+  if (!win) {
+    showToast('ポップアップがブロックされました。ブラウザの設定をご確認ください');
+    return;
+  }
+  let printed = false;
+  const tryPrint = () => {
+    if (printed) return;
+    printed = true;
+    try {
+      win.focus();
+      win.print();
+    } catch (e) {
+      // クロスオリジンの制約等で失敗した場合は何もしない(タブは開いたままなので手動で印刷できる)
+    }
+  };
+  win.addEventListener('load', tryPrint);
+  setTimeout(tryPrint, 1500); // loadイベントが発火しないPDFビューア等へのフォールバック
+}
+
+const previewModal = document.getElementById('previewModal');
+const previewFrame = document.getElementById('previewFrame');
+function openPreview(url) {
+  if (!url) return;
+  previewFrame.src = url;
+  previewModal.classList.add('open');
+}
+function closePreview() {
+  previewModal.classList.remove('open');
+  previewFrame.src = 'about:blank';
+}
+document.getElementById('previewCloseBtn').addEventListener('click', closePreview);
+previewModal.addEventListener('click', (e) => {
+  if (e.target === previewModal) closePreview();
 });
 
 document.querySelectorAll('#audienceFilter button').forEach((b) => {
@@ -299,7 +343,7 @@ function renderSiteLinks() {
       const isSiori = s.domain === 'rad-ar.or.jp';
       return `<div class="site-card">
         <div class="site-info">
-          <div class="site-name">${escapeHtml(s.name)}${s.required ? ' <span class="req-badge">必須</span>' : ''}</div>
+          <div class="site-name">${escapeHtml(s.name)}</div>
         </div>
         <a class="site-go" id="${isSiori ? 'siteGoSiori' : ''}" href="${url}" target="_blank" rel="noopener">
           ${isSiori ? '<span id="siteGoSioriLabel">検索 ↗</span>' : '検索 ↗'}
