@@ -26,19 +26,27 @@ const AUDIENCE_URL_PAIRS = [
   { urlTarget: 'url_disease', titleTarget: 'title_disease', audience: 'disease' },
 ];
 
-// 上から順にチェックし、最初に一致したキーワードの取込先を採用する。
-// 「資料タイトル」列は対象ごとの区別が名前だけでは付けにくいため自動判定せず、手動で選んでもらう。
+// 対象(患者さん向け/医療従事者向け/疾患向け)を表すキーワード。
+// 「患者向け資料URL」と「患者向け資料名」のように、URL列とタイトル列の両方に
+// 同じ対象キーワードが含まれるため、対象キーワードの単純な部分一致だけでは
+// URL列とタイトル列を区別できない。先に対象を判定し、その後「url」を含むか
+// 「名」を含むかでURL列/タイトル列を振り分ける。
+const AUDIENCE_PATTERNS = [
+  { audience: 'hcp', re: /医療従事者向け|医療関係者向け|医療従事向け|hcp/ },
+  { audience: 'disease', re: /疾患向け/ },
+  { audience: 'patient', re: /患者(さん)?向け/ },
+];
+
+// 対象キーワードを含まない列(薬剤名・YJコードなど)の判定は、上から順にチェックし、
+// 最初に一致したキーワードの取込先を採用する。
 const KEYWORD_RULES = [
   { key: 'name', words: ['薬剤名', '薬品名', '医薬品名', '品名', '製品名'] },
   { key: 'yj', words: ['yjコード', 'yj'] },
   { key: 'category', words: ['薬効分類', '分類', '薬効'] },
   { key: 'maker', words: ['メーカー', '製造販売元', '製造元', '会社名'] },
-  { key: 'url_hcp', words: ['医療従事者', '医療関係者', '医療従事', 'hcp'] },
-  { key: 'url_disease', words: ['疾患'] },
   { key: 'url_paper', words: ['取り寄せ', '資材取り寄せ'] },
-  { key: 'url_patient', words: ['患者さん向け', '患者向け', '患者'] },
   { key: 'memo', words: ['メモ', '備考', 'memo'] },
-  { key: 'url_patient', words: ['url'] }, // それ以外の「URL」列は患者さん向けと仮定(手動で変更可)
+  { key: 'url_patient', words: ['url'] }, // 対象キーワードのない「URL」列は患者さん向けと仮定(手動で変更可)
 ];
 
 function normalizeHeader(s) {
@@ -66,6 +74,14 @@ export async function readExcelFile(file) {
 export function guessColumnMapping(headers) {
   return headers.map((h) => {
     const norm = normalizeHeader(h);
+
+    for (const { audience, re } of AUDIENCE_PATTERNS) {
+      if (!re.test(norm)) continue;
+      if (norm.includes('url')) return `url_${audience}`;
+      if (norm.includes('資料名') || norm.includes('名')) return `title_${audience}`;
+      return `url_${audience}`; // どちらか判別できない場合はURL列として仮定(手動で変更可)
+    }
+
     for (const rule of KEYWORD_RULES) {
       if (rule.words.some((w) => norm.includes(w))) return rule.key;
     }
