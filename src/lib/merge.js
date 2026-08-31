@@ -11,9 +11,16 @@ export function planDrugMerge(existingDrugs, incomingDrugs) {
   const nameToAddIndex = new Map();
 
   incomingDrugs.forEach((d) => {
+    // YJコードがある場合はYJコードのみで判定する(名前へのフォールバックはしない)。
+    // 過去の不具合等でYJコードと名前が別々の薬を指すよう壊れたドキュメントが残っていた場合、
+    // 名前だけで一致してしまうと全く無関係な薬の資料が巻き込まれてしまうため。
+    // YJコードが空の行(YJコード自体が存在しない薬)のときだけ名前で判定する。
     let existing = null;
-    if (d.yj) existing = existingDrugs.find((x) => x.yj && x.yj === d.yj);
-    if (!existing && d.name) existing = existingDrugs.find((x) => x.name === d.name);
+    if (d.yj) {
+      existing = existingDrugs.find((x) => x.yj && x.yj === d.yj);
+    } else if (d.name) {
+      existing = existingDrugs.find((x) => x.name === d.name);
+    }
     if (existing) {
       resolvedByImportedId.set(d.id, existing.id);
       return;
@@ -21,9 +28,13 @@ export function planDrugMerge(existingDrugs, incomingDrugs) {
 
     // 同じ薬が複数行に分けて書かれている場合(例:同じ薬の資料を行を増やして記入)、
     // このバッチ内で既に追加予定になっている同じ薬があればそれと同じ扱いにする(二重登録を防ぐ)。
+    // 既存マッチと同じ理由で、YJコードがある場合は名前へのフォールバックをしない。
     let pendingIndex = null;
-    if (d.yj && yjToAddIndex.has(d.yj)) pendingIndex = yjToAddIndex.get(d.yj);
-    if (pendingIndex == null && d.name && nameToAddIndex.has(d.name)) pendingIndex = nameToAddIndex.get(d.name);
+    if (d.yj) {
+      if (yjToAddIndex.has(d.yj)) pendingIndex = yjToAddIndex.get(d.yj);
+    } else if (d.name && nameToAddIndex.has(d.name)) {
+      pendingIndex = nameToAddIndex.get(d.name);
+    }
 
     if (pendingIndex != null) {
       addIndexByImportedId.set(d.id, pendingIndex);
@@ -65,9 +76,16 @@ export function planDrugSync(existingDrugs, incomingDrugs) {
   const updatedExistingIds = new Set();
 
   incomingDrugs.forEach((d) => {
+    // YJコードがある場合はYJコードのみで判定する(名前へのフォールバックはしない)。
+    // 過去の不具合等でYJコードと名前が別々の薬を指すよう壊れたドキュメントが残っていた場合、
+    // 名前だけで一致してしまうと全く無関係な薬の資料が巻き込まれてしまうため。
+    // YJコードが空の行(YJコード自体が存在しない薬)のときだけ名前で判定する。
     let existing = null;
-    if (d.yj) existing = existingDrugs.find((x) => x.yj && x.yj === d.yj);
-    if (!existing && d.name) existing = existingDrugs.find((x) => x.name === d.name);
+    if (d.yj) {
+      existing = existingDrugs.find((x) => x.yj && x.yj === d.yj);
+    } else if (d.name) {
+      existing = existingDrugs.find((x) => x.name === d.name);
+    }
     if (existing) {
       resolvedByImportedId.set(d.id, existing.id);
       matchedExistingIds.add(existing.id);
@@ -80,9 +98,13 @@ export function planDrugSync(existingDrugs, incomingDrugs) {
       return;
     }
 
+    // 既存マッチと同じ理由で、YJコードがある場合は名前へのフォールバックをしない。
     let pendingIndex = null;
-    if (d.yj && yjToAddIndex.has(d.yj)) pendingIndex = yjToAddIndex.get(d.yj);
-    if (pendingIndex == null && d.name && nameToAddIndex.has(d.name)) pendingIndex = nameToAddIndex.get(d.name);
+    if (d.yj) {
+      if (yjToAddIndex.has(d.yj)) pendingIndex = yjToAddIndex.get(d.yj);
+    } else if (d.name && nameToAddIndex.has(d.name)) {
+      pendingIndex = nameToAddIndex.get(d.name);
+    }
     if (pendingIndex != null) {
       addIndexByImportedId.set(d.id, pendingIndex);
       return;
