@@ -18,6 +18,7 @@ import {
   updateDrugsBatch,
   deleteDrugsBatch,
   deleteResourcesBatch,
+  updateResourcesBatch,
 } from './store.js';
 import { toSearchKey } from './lib/searchKey.js';
 import { fetchSioriId, sioriDirectUrl } from './lib/siori.js';
@@ -152,25 +153,6 @@ favoritesList.addEventListener('click', (e) => {
   closeFavoritesModal();
   selectDrug(btn.dataset.drugId);
   drugInput.focus();
-});
-
-/* ---------------- 資料タイトルの一括修正(過去の取込で自動生成されたタイトルをメモの内容に戻す) ---------------- */
-document.getElementById('fixTitlesBtn').addEventListener('click', async () => {
-  const targets = resources.filter(
-    (r) => r.type === 'web' && r.url && r.memo && r.memo.trim() && r.title === titleFromUrl(r.url),
-  );
-  if (targets.length === 0) {
-    showToast('修正対象の資料は見つかりませんでした');
-    return;
-  }
-  if (!window.confirm(`${targets.length}件の資料タイトルを、メモの内容に修正します。よろしいですか?`)) return;
-  closeDrawer();
-  try {
-    await Promise.all(targets.map((r) => updateResource(r.id, { title: r.memo, memo: '' })));
-    showToast(`${targets.length}件のタイトルを修正しました`);
-  } catch (e) {
-    showToast('修正に失敗しました。通信状況をご確認ください');
-  }
 });
 
 watchAuth((user) => {
@@ -807,30 +789,43 @@ document.getElementById('excelImportBtn').addEventListener('click', async () => 
       }
     }
 
-    // 資料側(Excelの資料列から来たもの)はtype・タイトル・URL(紙の場合は連絡方法)が完全一致した場合のみ重複とみなす(4.8のマージ方式と共通)
-    const seenKeys = new Set(
-      resources.map((r) => `${r.drugId}|${r.type}|${r.title}|${r.type === 'paper' ? r.paperContact : r.url}`),
+    // 資料側(Excelの資料列から来たもの)は、type・URL(紙の場合は連絡方法)が一致すれば「同じ資料」とみなす。
+    // 一致した場合、タイトル/メモがExcel側と違えば最新の内容(D/F/H列など)に更新する。
+    // これにより、旧仕様の取込で自動生成タイトルのままになっている資料も、再取込するだけで直る。
+    const existingByKey = new Map(
+      resources.map((r) => [`${r.drugId}|${r.type}|${r.type === 'paper' ? r.paperContact : r.url}`, r]),
     );
+    const seenKeys = new Set();
     const resourcesToAdd = [];
+    const resourcesToUpdate = [];
     incomingResources.forEach((r) => {
       const localDrugId = drugIdMap.get(r.tempDrugId);
       if (!localDrugId) return;
       const isPaper = r.type === 'paper';
       const title = (r.title && r.title.trim()) || (isPaper ? '紙資材の取り寄せ' : titleFromUrl(r.url));
-      const key = `${localDrugId}|${r.type}|${title}|${isPaper ? r.paperContact : r.url}`;
+      const memo = r.memo || '';
+      const key = `${localDrugId}|${r.type}|${isPaper ? r.paperContact : r.url}`;
       if (seenKeys.has(key)) return;
       seenKeys.add(key);
+      const existing = existingByKey.get(key);
+      if (existing) {
+        if (existing.title !== title || (existing.memo || '') !== memo) {
+          resourcesToUpdate.push({ id: existing.id, fields: { title, memo } });
+        }
+        return;
+      }
       resourcesToAdd.push(
         isPaper
-          ? { drugId: localDrugId, type: 'paper', paperFrom: r.paperFrom || '', paperContact: r.paperContact, audience: r.audience, memo: r.memo || '', title }
-          : { drugId: localDrugId, type: 'web', url: r.url, audience: r.audience, memo: r.memo || '', title },
+          ? { drugId: localDrugId, type: 'paper', paperFrom: r.paperFrom || '', paperContact: r.paperContact, audience: r.audience, memo, title }
+          : { drugId: localDrugId, type: 'web', url: r.url, audience: r.audience, memo, title },
       );
     });
     if (resourcesToAdd.length > 0) await addResourcesBatch(resourcesToAdd);
+    if (resourcesToUpdate.length > 0) await updateResourcesBatch(resourcesToUpdate);
 
     excelModal.classList.remove('open');
     showToast(
-      `採用医薬品リストを更新しました:追加${drugPlan.toAdd.length}件・更新${drugPlan.toUpdate.length}件・削除${drugPlan.toDelete.length}件、資料+${resourcesToAdd.length}件`,
+      `採用医薬品リストを更新しました:追加${drugPlan.toAdd.length}件・更新${drugPlan.toUpdate.length}件・削除${drugPlan.toDelete.length}件、資料+${resourcesToAdd.length}件・資料タイトル更新${resourcesToUpdate.length}件`,
     );
     excelState = null;
   } catch (err) {

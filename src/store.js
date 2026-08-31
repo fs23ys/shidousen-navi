@@ -192,3 +192,14 @@ export function deleteDrugsBatch(ids) {
 export function deleteResourcesBatch(ids) {
   return batchDeleteAll(resourcesCol, ids);
 }
+
+export function updateResourcesBatch(updates) {
+  return (async () => {
+    for (let i = 0; i < updates.length; i += 400) {
+      const chunk = updates.slice(i, i + 400);
+      const batch = writeBatch(db);
+      chunk.forEach(({ id, fields }) => batch.update(doc(resourcesCol, id), stripUndefined(fields)));
+      await batch.commit();
+    }
+  })();
+}
