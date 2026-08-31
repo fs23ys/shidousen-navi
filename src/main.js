@@ -311,10 +311,32 @@ const resListEl = document.getElementById('resList');
 
 let favoriteOnly = false;
 
+// タイトル先頭の①②③...(丸数字)で昇順に並べる。丸数字がない資料は元の順序のまま後ろに続く。
+const CIRCLED_NUMBERS = '①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳';
+function circledPrefixNumber(title) {
+  const ch = (title || '').trim()[0];
+  const idx = CIRCLED_NUMBERS.indexOf(ch);
+  return idx === -1 ? null : idx + 1;
+}
+function sortByCircledPrefix(list) {
+  return list
+    .map((r, i) => ({ r, i }))
+    .sort((a, b) => {
+      const an = circledPrefixNumber(a.r.title);
+      const bn = circledPrefixNumber(b.r.title);
+      if (an != null && bn != null) return an - bn || a.i - b.i;
+      if (an != null) return -1;
+      if (bn != null) return 1;
+      return a.i - b.i;
+    })
+    .map(({ r }) => r);
+}
+
 function renderResources() {
   let list = resources.filter((r) => r.drugId === selectedDrugId);
   if (audienceFilter !== 'all') list = list.filter((r) => r.audience === audienceFilter);
   if (favoriteOnly) list = list.filter((r) => r.favorite);
+  list = sortByCircledPrefix(list);
   document.getElementById('resCount').textContent = list.length;
   if (list.length === 0) {
     resListEl.innerHTML = `<div class="empty-panel">${
@@ -451,9 +473,24 @@ document.querySelectorAll('#audienceFilter button').forEach((b) => {
 /* ---------------- SITE SEARCH LINKS ---------------- */
 const siteListEl = document.getElementById('siteList');
 
+// くすりのしおりを優先して上に表示する(未掲載のドメインは元の順序のまま後ろに続く)
+const SITE_DOMAIN_ORDER = ['rad-ar.or.jp', 'pmda.go.jp'];
+function sortSites(list) {
+  return list
+    .map((s, i) => ({ s, i }))
+    .sort((a, b) => {
+      const ai = SITE_DOMAIN_ORDER.indexOf(a.s.domain);
+      const bi = SITE_DOMAIN_ORDER.indexOf(b.s.domain);
+      const av = ai === -1 ? SITE_DOMAIN_ORDER.length : ai;
+      const bv = bi === -1 ? SITE_DOMAIN_ORDER.length : bi;
+      return av !== bv ? av - bv : a.i - b.i;
+    })
+    .map(({ s }) => s);
+}
+
 function renderSiteLinks() {
   const d = drugs.find((x) => x.id === selectedDrugId);
-  const visibleSites = sites.filter((s) => !s.makerOnly || s.makerOnly === d.maker);
+  const visibleSites = sortSites(sites.filter((s) => !s.makerOnly || s.makerOnly === d.maker));
   const hiddenCount = sites.length - visibleSites.length;
   document.getElementById('siteCount').textContent = visibleSites.length;
   if (visibleSites.length === 0) {
