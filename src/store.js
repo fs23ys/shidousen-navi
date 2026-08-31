@@ -174,12 +174,14 @@ async function batchDeleteAll(col, ids) {
   }
 }
 
+// update()ではなくset(..., {merge:true})を使う: 対象ドキュメントが何らかの理由で
+// 既に存在しない場合でもエラーで処理全体が止まらず、内容を作り直して同期できる。
 export function updateDrugsBatch(updates) {
   return (async () => {
     for (let i = 0; i < updates.length; i += 400) {
       const chunk = updates.slice(i, i + 400);
       const batch = writeBatch(db);
-      chunk.forEach(({ id, fields }) => batch.update(doc(drugsCol, id), stripUndefined(fields)));
+      chunk.forEach(({ id, fields }) => batch.set(doc(drugsCol, id), stripUndefined(fields), { merge: true }));
       await batch.commit();
     }
   })();
@@ -198,7 +200,7 @@ export function updateResourcesBatch(updates) {
     for (let i = 0; i < updates.length; i += 400) {
       const chunk = updates.slice(i, i + 400);
       const batch = writeBatch(db);
-      chunk.forEach(({ id, fields }) => batch.update(doc(resourcesCol, id), stripUndefined(fields)));
+      chunk.forEach(({ id, fields }) => batch.set(doc(resourcesCol, id), stripUndefined(fields), { merge: true }));
       await batch.commit();
     }
   })();

@@ -305,6 +305,15 @@ main{max-width:1080px; margin:0 auto; padding:16px 28px 60px;}
 .manage-box{background:var(--card); border:1.5px solid var(--line); border-radius:var(--radius-card); padding:20px;}
 .manage-box h3{font-family:'Zen Kaku Gothic New',sans-serif; font-size:14.5px; margin:0 0 4px; font-weight:700;}
 .manage-box p.hint{font-size:12px; color:var(--ink-faint); margin:0 0 16px;}
+.manage-box summary{
+  font-family:'Zen Kaku Gothic New',sans-serif; font-size:14.5px; font-weight:700;
+  cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between;
+}
+.manage-box summary::-webkit-details-marker{display:none;}
+.manage-box summary::after{content:'▾'; font-size:12px; color:var(--ink-faint); transition:transform .15s ease; margin-left:8px;}
+.manage-box[open] summary::after{transform:rotate(180deg);}
+.manage-box[open] summary{margin-bottom:12px;}
+.manage-box p.hint:last-child{margin-bottom:0;}
 .dropzone{
   border:2px dashed var(--line-strong); border-radius:var(--radius-sm);
   padding:22px 14px; text-align:center; color:var(--ink-faint); font-size:12.5px;
