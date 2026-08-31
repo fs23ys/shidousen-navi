@@ -181,8 +181,6 @@ function renderSelection() {
   document.getElementById('selDrugName').textContent = d.name;
   document.getElementById('selDrugCode').textContent = d.category || '';
   document.getElementById('selDrugCodes').innerHTML = `
-    <span class="code-item"><span class="k">JAN</span>${escapeHtml(d.jan || '')}</span>
-    <span class="code-item"><span class="k">GS1</span>${escapeHtml(d.gs1 || '')}</span>
     <span class="code-item"><span class="k">YJ</span>${escapeHtml(d.yj || '')}</span>
   `;
   document.getElementById('modalDrugLabel').textContent = d.name + ' に資料を登録';

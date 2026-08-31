@@ -6,8 +6,6 @@ export const COLUMN_TARGETS = [
   { key: 'none', label: '(使わない)' },
   { key: 'name', label: '薬剤名' },
   { key: 'yj', label: 'YJコード' },
-  { key: 'jan', label: 'JANコード' },
-  { key: 'gs1', label: 'GS1コード' },
   { key: 'category', label: '分類(薬効分類など)' },
   { key: 'maker', label: 'メーカー名' },
   { key: 'url_patient', label: 'URL(患者さん向け資料)' },
@@ -20,8 +18,6 @@ export const COLUMN_TARGETS = [
 const KEYWORD_RULES = [
   { key: 'name', words: ['薬剤名', '薬品名', '医薬品名', '品名', '製品名'] },
   { key: 'yj', words: ['yjコード', 'yj'] },
-  { key: 'jan', words: ['janコード', 'jan'] },
-  { key: 'gs1', words: ['gs1コード', 'gs1'] },
   { key: 'category', words: ['薬効分類', '分類', '薬効'] },
   { key: 'maker', words: ['メーカー', '製造販売元', '製造元', '会社名'] },
   { key: 'url_hcp', words: ['医療従事者', '医療関係者', '医療従事', 'hcp'] },
@@ -81,8 +77,6 @@ export function buildImportPlan(rows, mapping) {
 
   const nameCol = singleCol('name');
   const yjCol = singleCol('yj');
-  const janCol = singleCol('jan');
-  const gs1Col = singleCol('gs1');
   const categoryCol = singleCol('category');
   const makerCol = singleCol('maker');
   const memoCols = colsFor('memo');
@@ -100,8 +94,6 @@ export function buildImportPlan(rows, mapping) {
       id: tempId,
       name,
       yj: cell(row, yjCol),
-      jan: cell(row, janCol),
-      gs1: cell(row, gs1Col),
       category: cell(row, categoryCol),
       maker: cell(row, makerCol),
     });
