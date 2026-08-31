@@ -53,7 +53,7 @@ const TYPE_META = {
 const AUDIENCE_META = {
   patient: { label: '患者さん向け', color: '#4F8D77', tint: '#DCF3E7' },
   hcp: { label: '医療関係者向け', color: '#E0A86E', tint: '#FBEBD8' },
-  disease: { label: '疾患向け', color: '#E0A86E', tint: '#FBEBD8' },
+  disease: { label: '疾患向け', color: '#D9B84F', tint: '#FBF3D8' },
 };
 
 /* ---------------- AUTH ---------------- */
