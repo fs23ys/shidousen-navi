@@ -105,6 +105,18 @@
   </div>
 
   <div class="manage-box" style="margin-bottom:18px;">
+    <h3>よく使う指導せん</h3>
+    <p class="hint">☆でお気に入りに登録した資料を、薬をまたいでまとめて確認できます。</p>
+    <button class="import-file-btn" id="showFavoritesBtn">★ お気に入り一覧を見る</button>
+  </div>
+
+  <div class="manage-box" style="margin-bottom:18px;">
+    <h3>資料タイトルの一括修正</h3>
+    <p class="hint">以前の取込でタイトルが「◯◯.co.jp の資料」のように自動生成されたままになっている資料を、メモの内容(資材名)に修正します。</p>
+    <button class="import-file-btn" id="fixTitlesBtn">タイトルを一括修正</button>
+  </div>
+
+  <div class="manage-box" style="margin-bottom:18px;">
     <h3>採用医薬品リストの取込</h3>
     <p class="hint">Excelファイル(.xlsx)をアップロードすると、薬剤名・YJコード・分類・メーカー名・資料URLなどの列を読み取って一括登録します。<strong>取り込むと採用医薬品リストは最新の内容に同期され、ファイルにない薬剤は削除されます</strong>(削除前に確認画面が出ます)。</p>
     <div class="dropzone">
@@ -273,6 +285,17 @@
       </div>
       <p class="import-summary" id="excelSummary"></p>
     </div>
+  </div>
+</div>
+
+<!-- FAVORITES MODAL(お気に入り一覧) -->
+<div class="modal-overlay" id="favoritesModal">
+  <div class="modal modal-wide" style="max-width:640px;">
+    <div class="modal-head" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:12px;">
+      <h3 class="display" style="margin:0;">★ お気に入り一覧</h3>
+      <button class="drawer-close" id="favoritesCloseBtn" aria-label="閉じる">✕</button>
+    </div>
+    <div style="padding:0 24px 24px; max-height:70vh; overflow-y:auto;" id="favoritesList"></div>
   </div>
 </div>
 

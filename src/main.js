@@ -94,6 +94,85 @@ document.getElementById('menuBtn').addEventListener('click', openDrawer);
 document.getElementById('drawerCloseBtn').addEventListener('click', closeDrawer);
 drawerOverlay.addEventListener('click', closeDrawer);
 
+/* ---------------- FAVORITES MODAL(薬をまたいだお気に入り一覧) ---------------- */
+const favoritesModal = document.getElementById('favoritesModal');
+const favoritesList = document.getElementById('favoritesList');
+
+function renderFavoritesModal() {
+  const favs = resources.filter((r) => r.favorite);
+  if (favs.length === 0) {
+    favoritesList.innerHTML = `<div class="empty-panel">お気に入りに登録された資料はまだありません。資料カードの☆から登録できます。</div>`;
+    return;
+  }
+  favoritesList.innerHTML = favs
+    .map((r) => {
+      const d = drugs.find((x) => x.id === r.drugId);
+      const meta = TYPE_META[r.type];
+      const icon = r.type === 'paper' ? '📦' : r.storagePath ? '📄' : '🌐';
+      const openBtn =
+        r.type === 'web'
+          ? `<a href="${escapeHtml(r.url || '#')}" target="_blank" rel="noopener">開く ↗</a>`
+          : /^https?:\/\//i.test(r.paperContact || '')
+            ? `<a href="${escapeHtml(r.paperContact)}" target="_blank" rel="noopener">📦 取り寄せ ↗</a>`
+            : '';
+      return `<div class="res-card" style="--tab-color:${meta.color};--tab-tint:${meta.tint}">
+        <div class="res-top">
+          <span class="res-icon">${icon}</span>
+          <div class="res-title">${escapeHtml(r.title)}
+            <div style="font-size:11px; color:var(--ink-faint); font-weight:400; margin-top:2px;">${escapeHtml(d?.name || '(削除された薬剤)')}</div>
+          </div>
+        </div>
+        <div class="res-actions">
+          ${openBtn}
+          ${d ? `<button data-action="goto" data-drug-id="${d.id}">この薬を開く</button>` : ''}
+        </div>
+      </div>`;
+    })
+    .join('');
+}
+
+function openFavoritesModal() {
+  renderFavoritesModal();
+  favoritesModal.classList.add('open');
+}
+function closeFavoritesModal() {
+  favoritesModal.classList.remove('open');
+}
+document.getElementById('showFavoritesBtn').addEventListener('click', () => {
+  closeDrawer();
+  openFavoritesModal();
+});
+document.getElementById('favoritesCloseBtn').addEventListener('click', closeFavoritesModal);
+favoritesModal.addEventListener('click', (e) => {
+  if (e.target === favoritesModal) closeFavoritesModal();
+});
+favoritesList.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-action="goto"]');
+  if (!btn) return;
+  closeFavoritesModal();
+  selectDrug(btn.dataset.drugId);
+  drugInput.focus();
+});
+
+/* ---------------- 資料タイトルの一括修正(過去の取込で自動生成されたタイトルをメモの内容に戻す) ---------------- */
+document.getElementById('fixTitlesBtn').addEventListener('click', async () => {
+  const targets = resources.filter(
+    (r) => r.type === 'web' && r.url && r.memo && r.memo.trim() && r.title === titleFromUrl(r.url),
+  );
+  if (targets.length === 0) {
+    showToast('修正対象の資料は見つかりませんでした');
+    return;
+  }
+  if (!window.confirm(`${targets.length}件の資料タイトルを、メモの内容に修正します。よろしいですか?`)) return;
+  closeDrawer();
+  try {
+    await Promise.all(targets.map((r) => updateResource(r.id, { title: r.memo, memo: '' })));
+    showToast(`${targets.length}件のタイトルを修正しました`);
+  } catch (e) {
+    showToast('修正に失敗しました。通信状況をご確認ください');
+  }
+});
+
 watchAuth((user) => {
   if (user) {
     lockScreen.classList.add('hidden');
@@ -147,32 +226,72 @@ const drugInput = document.getElementById('drugInput');
 const suggestList = document.getElementById('suggestList');
 
 drugInput.addEventListener('input', renderSuggestions);
+drugInput.addEventListener('focus', renderSuggestions);
+
+// キーボードショートカット:「/」でどこからでも検索欄にフォーカス、検索欄でEscを押すとクリア
+document.addEventListener('keydown', (e) => {
+  if (document.querySelector('.modal-overlay.open')) return; // モーダル表示中は入力の邪魔をしない
+  const activeTag = document.activeElement?.tagName;
+  const isTyping = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT';
+
+  if (e.key === '/' && !isTyping) {
+    e.preventDefault();
+    drugInput.focus();
+  }
+  if (e.key === 'Escape' && document.activeElement === drugInput) {
+    drugInput.value = '';
+    renderSuggestions();
+    drugInput.blur();
+  }
+});
 
 const jaCollator = new Intl.Collator('ja');
 
-// 検索結果リストは常時表示(左カラムに固定)。入力が空なら採用薬全件を五十音順で一覧表示する。
+let recentDrugIds = JSON.parse(localStorage.getItem('shidousen.recentDrugIds') || '[]');
+function pushRecentDrug(id) {
+  recentDrugIds = [id, ...recentDrugIds.filter((x) => x !== id)].slice(0, 20);
+  localStorage.setItem('shidousen.recentDrugIds', JSON.stringify(recentDrugIds));
+}
+
+// 検索結果リストは常時表示(左カラムに固定)。
+// 入力が空なら、直近で選択した薬(最大10件)を新しい順に表示する。まだ履歴がなければ採用薬全件を五十音順で表示する。
 function renderSuggestions() {
   const qRaw = drugInput.value.trim();
   const q = toSearchKey(qRaw);
-  const matches = drugs
-    .filter((d) => (q === '' ? true : toSearchKey(d.name).includes(q) || toSearchKey(d.category).includes(q)))
-    .sort((a, b) => jaCollator.compare(a.name, b.name));
+  let matches;
+  let sectionLabel = '';
+  if (q === '') {
+    const recent = recentDrugIds.map((id) => drugs.find((d) => d.id === id)).filter(Boolean).slice(0, 10);
+    if (recent.length > 0) {
+      matches = recent;
+      sectionLabel = '最近選択した薬';
+    } else {
+      matches = drugs.slice().sort((a, b) => jaCollator.compare(a.name, b.name));
+    }
+  } else {
+    matches = drugs
+      .filter((d) => toSearchKey(d.name).includes(q) || toSearchKey(d.category).includes(q))
+      .sort((a, b) => jaCollator.compare(a.name, b.name));
+  }
   if (matches.length === 0) {
     suggestList.innerHTML = `<div class="suggest-empty">一致する採用薬が見つかりません</div>`;
   } else {
-    suggestList.innerHTML = matches
-      .slice(0, 50)
-      .map((d) => {
-        const cnt = resources.filter((r) => r.drugId === d.id).length;
-        return `<div class="suggest-item ${d.id === selectedDrugId ? 'active' : ''}" data-id="${d.id}">
-          <div>
-            <div class="suggest-name">${escapeHtml(d.name)}</div>
-            <div class="suggest-meta">${escapeHtml(d.category || '')} · <span class="mono">YJ ${escapeHtml(d.yj || '')}</span></div>
-          </div>
-          <span class="suggest-count">資料${cnt}件</span>
-        </div>`;
-      })
-      .join('');
+    const label = sectionLabel ? `<div class="suggest-section-label">${escapeHtml(sectionLabel)}</div>` : '';
+    suggestList.innerHTML =
+      label +
+      matches
+        .slice(0, 50)
+        .map((d) => {
+          const cnt = resources.filter((r) => r.drugId === d.id).length;
+          return `<div class="suggest-item ${d.id === selectedDrugId ? 'active' : ''}" data-id="${d.id}">
+            <div>
+              <div class="suggest-name">${escapeHtml(d.name)}</div>
+              <div class="suggest-meta">${escapeHtml(d.category || '')} · <span class="mono">YJ ${escapeHtml(d.yj || '')}</span></div>
+            </div>
+            <span class="suggest-count">資料${cnt}件</span>
+          </div>`;
+        })
+        .join('');
   }
 }
 
@@ -183,6 +302,7 @@ suggestList.addEventListener('click', (e) => {
 
 function selectDrug(id) {
   selectedDrugId = id;
+  pushRecentDrug(id);
   renderSuggestions();
   renderSelection();
 }
@@ -228,7 +348,7 @@ function renderResources() {
     .map((r) => {
       const meta = TYPE_META[r.type];
       const aud = AUDIENCE_META[r.audience] || AUDIENCE_META.patient;
-      const icon = r.type === 'paper' ? '📮' : r.storagePath ? '📄' : '🌐';
+      const icon = r.type === 'paper' ? '📦' : r.storagePath ? '📄' : '🌐';
       let detail = '';
       let action = '';
       let printBtn = '';
@@ -241,9 +361,13 @@ function renderResources() {
           detail = `<div class="res-detail">📎 アプリ内に保存したPDF(外部サイトの状態に関わらず開けます)</div>`;
         }
       } else {
-        detail = `<div class="res-detail"><span class="k">取り寄せ先</span>${escapeHtml(r.paperFrom || '')}</div>
-                  <div class="res-detail"><span class="k">連絡方法</span>${escapeHtml(r.paperContact || '')}</div>`;
-        action = `<button data-action="copy" data-text="${escapeHtml(r.paperContact || '')}">連絡先をコピー</button>`;
+        const contactIsUrl = /^https?:\/\//i.test(r.paperContact || '');
+        detail =
+          `${r.paperFrom ? `<div class="res-detail"><span class="k">取り寄せ先</span>${escapeHtml(r.paperFrom)}</div>` : ''}` +
+          (contactIsUrl ? '' : `<div class="res-detail"><span class="k">連絡方法</span>${escapeHtml(r.paperContact || '')}</div>`);
+        action = contactIsUrl
+          ? `<a href="${escapeHtml(r.paperContact)}" target="_blank" rel="noopener">📦 紙資材を取り寄せ ↗</a>`
+          : `<button data-action="copy" data-text="${escapeHtml(r.paperContact || '')}">連絡先をコピー</button>`;
       }
       return `<div class="res-card" style="--tab-color:${meta.color};--tab-tint:${meta.tint}">
         <div class="res-top">
@@ -623,7 +747,11 @@ function renderExcelPreview() {
           res.length === 0
             ? '—'
             : res
-                .map((r) => `${AUD_LABEL[r.audience] || r.audience}:${escapeHtml(r.title || '(無題)')}`)
+                .map((r) =>
+                  r.type === 'paper'
+                    ? `紙資材取り寄せ:${escapeHtml(r.title || '(無題)')}`
+                    : `${AUD_LABEL[r.audience] || r.audience}:${escapeHtml(r.title || '(無題)')}`,
+                )
                 .join('<br>');
         return `<tr><td>${escapeHtml(d.name)}</td><td>${escapeHtml(d.yj || '')}</td><td>${resSummary}</td></tr>`;
       })
@@ -679,17 +807,24 @@ document.getElementById('excelImportBtn').addEventListener('click', async () => 
       }
     }
 
-    // 資料側(Excelの資料列から来たもの)はドメインが同じでもtype・タイトル・URLが完全一致した場合のみ重複とみなす(4.8のマージ方式と共通)
-    const seenKeys = new Set(resources.map((r) => `${r.drugId}|${r.type}|${r.title}|${r.url}`));
+    // 資料側(Excelの資料列から来たもの)はtype・タイトル・URL(紙の場合は連絡方法)が完全一致した場合のみ重複とみなす(4.8のマージ方式と共通)
+    const seenKeys = new Set(
+      resources.map((r) => `${r.drugId}|${r.type}|${r.title}|${r.type === 'paper' ? r.paperContact : r.url}`),
+    );
     const resourcesToAdd = [];
     incomingResources.forEach((r) => {
       const localDrugId = drugIdMap.get(r.tempDrugId);
       if (!localDrugId) return;
-      const title = (r.title && r.title.trim()) || titleFromUrl(r.url);
-      const key = `${localDrugId}|web|${title}|${r.url}`;
+      const isPaper = r.type === 'paper';
+      const title = (r.title && r.title.trim()) || (isPaper ? '紙資材の取り寄せ' : titleFromUrl(r.url));
+      const key = `${localDrugId}|${r.type}|${title}|${isPaper ? r.paperContact : r.url}`;
       if (seenKeys.has(key)) return;
       seenKeys.add(key);
-      resourcesToAdd.push({ drugId: localDrugId, type: 'web', url: r.url, audience: r.audience, memo: r.memo || '', title });
+      resourcesToAdd.push(
+        isPaper
+          ? { drugId: localDrugId, type: 'paper', paperFrom: r.paperFrom || '', paperContact: r.paperContact, audience: r.audience, memo: r.memo || '', title }
+          : { drugId: localDrugId, type: 'web', url: r.url, audience: r.audience, memo: r.memo || '', title },
+      );
     });
     if (resourcesToAdd.length > 0) await addResourcesBatch(resourcesToAdd);
 

@@ -15,6 +15,7 @@ export const COLUMN_TARGETS = [
   { key: 'title_hcp', label: '資料タイトル(医療関係者向けURL用)' },
   { key: 'url_disease', label: 'URL(疾患向け資料)' },
   { key: 'title_disease', label: '資料タイトル(疾患向けURL用)' },
+  { key: 'url_paper', label: 'URL(紙資材取り寄せサイト)' },
   { key: 'memo', label: 'メモ' },
 ];
 
@@ -34,6 +35,7 @@ const KEYWORD_RULES = [
   { key: 'maker', words: ['メーカー', '製造販売元', '製造元', '会社名'] },
   { key: 'url_hcp', words: ['医療従事者', '医療関係者', '医療従事', 'hcp'] },
   { key: 'url_disease', words: ['疾患'] },
+  { key: 'url_paper', words: ['取り寄せ', '資材取り寄せ'] },
   { key: 'url_patient', words: ['患者さん向け', '患者向け', '患者'] },
   { key: 'memo', words: ['メモ', '備考', 'memo'] },
   { key: 'url_patient', words: ['url'] }, // それ以外の「URL」列は患者さん向けと仮定(手動で変更可)
@@ -102,6 +104,7 @@ export function buildImportPlan(rows, mapping) {
     urlCol: findCol(p.urlTarget),
     titleCol: findCol(p.titleTarget),
   }));
+  const paperCol = findCol('url_paper');
 
   const drugs = [];
   const resources = [];
@@ -128,6 +131,21 @@ export function buildImportPlan(rows, mapping) {
       if (!url) return;
       resources.push({ tempDrugId: tempId, type: 'web', url, audience, title: cell(row, titleCol), memo: rowMemo });
     });
+
+    // 資材取り寄せサイト:紙資材(現物)の注文ページへのリンク。type='paper'として登録し、
+    // 連絡方法(paperContact)にURLを入れることで、カード側で直接開けるボタンとして表示する。
+    const paperUrl = cell(row, paperCol);
+    if (paperUrl) {
+      resources.push({
+        tempDrugId: tempId,
+        type: 'paper',
+        paperFrom: '',
+        paperContact: paperUrl,
+        audience: 'patient',
+        title: '',
+        memo: rowMemo,
+      });
+    }
   });
 
   return { drugs, resources };
