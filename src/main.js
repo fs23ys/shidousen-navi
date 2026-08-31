@@ -207,15 +207,20 @@ function renderSelection() {
 /* ---------------- RESOURCE LIST ---------------- */
 const resListEl = document.getElementById('resList');
 
+let favoriteOnly = false;
+
 function renderResources() {
   let list = resources.filter((r) => r.drugId === selectedDrugId);
   if (audienceFilter !== 'all') list = list.filter((r) => r.audience === audienceFilter);
+  if (favoriteOnly) list = list.filter((r) => r.favorite);
   document.getElementById('resCount').textContent = list.length;
   if (list.length === 0) {
     resListEl.innerHTML = `<div class="empty-panel">${
-      audienceFilter === 'all'
-        ? 'まだ資料が登録されていません。<br>右上の「＋ 資料を追加」から登録できます。'
-        : '該当する対象の資料はまだありません。'
+      favoriteOnly
+        ? 'お気に入りに登録された資料はまだありません。'
+        : audienceFilter === 'all'
+          ? 'まだ資料が登録されていません。<br>右上の「＋ 資料を追加」から登録できます。'
+          : '該当する対象の資料はまだありません。'
     }</div>`;
     return;
   }
@@ -245,6 +250,7 @@ function renderResources() {
           <span class="res-icon">${icon}</span>
           <div class="res-title">${escapeHtml(r.title)}</div>
           <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0;">
+            <button class="fav-btn ${r.favorite ? 'is-fav' : ''}" data-action="favorite" data-id="${r.id}" title="お気に入り">${r.favorite ? '★' : '☆'}</button>
             <span class="res-type-chip">${meta.label}</span>
             <span class="aud-chip" style="--aud-color:${aud.color};--aud-tint:${aud.tint}">${aud.label}</span>
           </div>
@@ -276,6 +282,17 @@ resListEl.addEventListener('click', async (e) => {
   if (action === 'copy') copyText(btn.dataset.text);
   if (action === 'print') printResourceUrl(btn.dataset.url);
   if (action === 'preview') openPreview(btn.dataset.url);
+  if (action === 'favorite') {
+    const target = resources.find((x) => x.id === btn.dataset.id);
+    await updateResource(btn.dataset.id, { favorite: !target?.favorite });
+  }
+});
+
+document.getElementById('favOnlyBtn').addEventListener('click', (e) => {
+  favoriteOnly = !favoriteOnly;
+  e.currentTarget.classList.toggle('active', favoriteOnly);
+  e.currentTarget.textContent = favoriteOnly ? '★ お気に入りのみ' : '☆ お気に入りのみ';
+  renderResources();
 });
 
 /* ---------------- PRINT / PREVIEW ---------------- */
