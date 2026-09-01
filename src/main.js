@@ -443,8 +443,14 @@ function printResourceUrl(url) {
       // クロスオリジンの制約等で失敗した場合は何もしない(タブは開いたままなので手動で印刷できる)
     }
   };
-  win.addEventListener('load', tryPrint);
-  setTimeout(tryPrint, 1500); // loadイベントが発火しないPDFビューア等へのフォールバック
+  // クロスオリジンの新しいタブにはaddEventListener自体が許可されておらず例外になるため、
+  // ここで失敗しても setTimeout 側のフォールバックで印刷を試みられるようにtry/catchで囲む。
+  try {
+    win.addEventListener('load', tryPrint);
+  } catch (e) {
+    // ignore
+  }
+  setTimeout(tryPrint, 1500); // 上のloadイベントが使えない場合のフォールバック
 }
 
 document.querySelectorAll('#audienceFilter button').forEach((b) => {
