@@ -360,11 +360,10 @@ function renderResources() {
       let detail = '';
       let action = '';
       let printBtn = '';
-      let previewBtn = '';
       if (r.type === 'web') {
-        action = `<a href="${escapeHtml(r.url || '#')}" target="_blank" rel="noopener">開く ↗</a>`;
-        printBtn = `<button data-action="print" data-url="${escapeHtml(r.url || '')}">🖨️ 印刷</button>`;
-        previewBtn = `<button data-action="preview" data-url="${escapeHtml(r.url || '')}">🔍 拡大</button>`;
+        // 「開く」は単にタブを開くだけ、「印刷」は同じくタブを開いた上で印刷も試みる上位互換のため、
+        // ボタンは「印刷」1つに統一する(失敗しても開くだけになるだけで、開くより悪くはならない)。
+        printBtn = `<button data-action="print" data-url="${escapeHtml(r.url || '')}">🖨️ 開く・印刷</button>`;
         if (r.storagePath) {
           detail = `<div class="res-detail">📎 アプリ内に保存したPDF(外部サイトの状態に関わらず開けます)</div>`;
         }
@@ -392,7 +391,6 @@ function renderResources() {
         <div class="res-actions">
           ${action}
           ${printBtn}
-          ${previewBtn}
           <button data-action="edit" data-id="${r.id}">編集</button>
           <button class="res-del" data-action="delete" data-id="${r.id}">削除</button>
         </div>
@@ -413,7 +411,6 @@ resListEl.addEventListener('click', async (e) => {
   }
   if (action === 'copy') copyText(btn.dataset.text);
   if (action === 'print') printResourceUrl(btn.dataset.url);
-  if (action === 'preview') openPreview(btn.dataset.url);
   if (action === 'favorite') {
     const target = resources.find((x) => x.id === btn.dataset.id);
     await updateResource(btn.dataset.id, { favorite: !target?.favorite });
@@ -449,22 +446,6 @@ function printResourceUrl(url) {
   win.addEventListener('load', tryPrint);
   setTimeout(tryPrint, 1500); // loadイベントが発火しないPDFビューア等へのフォールバック
 }
-
-const previewModal = document.getElementById('previewModal');
-const previewFrame = document.getElementById('previewFrame');
-function openPreview(url) {
-  if (!url) return;
-  previewFrame.src = url;
-  previewModal.classList.add('open');
-}
-function closePreview() {
-  previewModal.classList.remove('open');
-  previewFrame.src = 'about:blank';
-}
-document.getElementById('previewCloseBtn').addEventListener('click', closePreview);
-previewModal.addEventListener('click', (e) => {
-  if (e.target === previewModal) closePreview();
-});
 
 document.querySelectorAll('#audienceFilter button').forEach((b) => {
   b.addEventListener('click', () => {
