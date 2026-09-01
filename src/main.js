@@ -322,6 +322,10 @@ function sortByCircledPrefix(list) {
   return list
     .map((r, i) => ({ r, i }))
     .sort((a, b) => {
+      // 紙資材の取り寄せは種類を問わず常に一番下に固定する
+      const ap = a.r.type === 'paper' ? 1 : 0;
+      const bp = b.r.type === 'paper' ? 1 : 0;
+      if (ap !== bp) return ap - bp;
       const an = circledPrefixNumber(a.r.title);
       const bn = circledPrefixNumber(b.r.title);
       if (an != null && bn != null) return an - bn || a.i - b.i;
