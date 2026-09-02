@@ -620,7 +620,7 @@ async function saveResource() {
     return;
   }
   if (file && file.size > MAX_RESOURCE_FILE_BYTES) {
-    showToast('ファイルが大きすぎます(20MBまで)');
+    showToast('ファイルが大きすぎます(50MBまで)');
     return;
   }
 
@@ -679,7 +679,7 @@ async function saveResource() {
       showToast('資料を登録しました');
     }
   } catch (e) {
-    showToast(e?.message === 'FILE_TOO_LARGE' ? 'ファイルが大きすぎます(20MBまで)' : '保存に失敗しました。通信状況をご確認ください');
+    showToast(e?.message === 'FILE_TOO_LARGE' ? 'ファイルが大きすぎます(50MBまで)' : '保存に失敗しました。通信状況をご確認ください');
   } finally {
     saveBtn.disabled = false;
     saveBtn.textContent = editingResourceId ? '変更を保存' : '登録する';

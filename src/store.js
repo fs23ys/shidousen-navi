@@ -18,7 +18,7 @@ import {
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from './firebase.js';
 
-export const MAX_RESOURCE_FILE_BYTES = 20 * 1024 * 1024; // 20MB
+export const MAX_RESOURCE_FILE_BYTES = 50 * 1024 * 1024; // 50MB
 
 const drugsCol = collection(db, 'drugs');
 const resourcesCol = collection(db, 'resources');
