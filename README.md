@@ -36,7 +36,7 @@ Firebase(Firestore)にデータを保存し、GitHub Pagesで静的サイトと�
 copy .env.example .env.local
 ```
 
-`.env.local` を開き、手順1で控えた値を貼り付ける(`VITE_OWNER_EMAIL` は既定で `fs.23ys@gmail.com` になっています)。
+`.env.local` を開き、手順1で控えた値を貼り付ける(`VITE_OWNER_EMAILS` はログインを許可するGoogleアカウントのメールアドレスで、複数許可する場合はカンマ区切りで指定します)。
 
 ```powershell
 npm install
@@ -76,7 +76,7 @@ GitHubの対象リポジトリ →「Settings」→「Secrets and variables」�
 - `VITE_FIREBASE_STORAGE_BUCKET`
 - `VITE_FIREBASE_MESSAGING_SENDER_ID`
 - `VITE_FIREBASE_APP_ID`
-- `VITE_OWNER_EMAIL`
+- `VITE_OWNER_EMAILS`
 
 ### 5. GitHub Pagesを有効にする
 

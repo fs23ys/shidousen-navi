@@ -18,7 +18,11 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-export const OWNER_EMAIL = import.meta.env.VITE_OWNER_EMAIL || '';
+// 複数のGoogleアカウントを許可できるよう、カンマ区切りで指定する。
+export const OWNER_EMAILS = (import.meta.env.VITE_OWNER_EMAILS || '')
+  .split(',')
+  .map((s) => s.trim().toLowerCase())
+  .filter(Boolean);
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
@@ -28,7 +32,7 @@ export const storage = getStorage(app);
 const googleProvider = new GoogleAuthProvider();
 
 export function isOwner(user) {
-  return !!user && !!user.email && user.email.toLowerCase() === OWNER_EMAIL.toLowerCase();
+  return !!user && !!user.email && OWNER_EMAILS.includes(user.email.toLowerCase());
 }
 
 export async function signInWithGoogle() {
