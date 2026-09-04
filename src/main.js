@@ -293,7 +293,11 @@ function renderSelection() {
   const d = drugs.find((x) => x.id === selectedDrugId);
   if (!d) return;
   audienceFilter = 'all';
-  document.querySelectorAll('#audienceFilter button').forEach((b) => b.classList.toggle('active', b.dataset.aud === 'all'));
+  document.querySelectorAll('#audienceFilter button[data-aud]').forEach((b) => b.classList.toggle('active', b.dataset.aud === 'all'));
+  favoriteOnly = false;
+  const favBtn = document.getElementById('favOnlyBtn');
+  favBtn.classList.remove('active');
+  favBtn.textContent = '☆ お気に入りのみ';
   document.getElementById('emptyHero').style.display = 'none';
   document.getElementById('resultZone').classList.add('open');
   document.getElementById('selDrugName').textContent = d.name;
@@ -453,10 +457,13 @@ function printResourceUrl(url) {
   setTimeout(tryPrint, 1500); // 上のloadイベントが使えない場合のフォールバック
 }
 
-document.querySelectorAll('#audienceFilter button').forEach((b) => {
+// data-aud を持つボタン(対象フィルタ)だけを対象にする。#favOnlyBtn も同じ
+// #audienceFilter 内にあるが対象フィルタではないため、ここに含めてはいけない
+// (含めると、お気に入りのみクリック時にaudienceFilterがundefinedになり資料が全て消えるバグになる)。
+document.querySelectorAll('#audienceFilter button[data-aud]').forEach((b) => {
   b.addEventListener('click', () => {
     audienceFilter = b.dataset.aud;
-    document.querySelectorAll('#audienceFilter button').forEach((x) => x.classList.toggle('active', x === b));
+    document.querySelectorAll('#audienceFilter button[data-aud]').forEach((x) => x.classList.toggle('active', x === b));
     renderResources();
   });
 });
