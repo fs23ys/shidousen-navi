@@ -305,6 +305,14 @@ function renderSelection() {
   document.getElementById('selDrugCodes').innerHTML = `
     <span class="code-item"><span class="k">YJ</span>${escapeHtml(d.yj || '')}</span>
   `;
+  const drugNoteEl = document.getElementById('drugNote');
+  if (d.note && d.note.trim()) {
+    drugNoteEl.style.display = 'block';
+    drugNoteEl.innerHTML = `<span class="drug-note-icon">📝</span>${escapeHtml(d.note)}`;
+  } else {
+    drugNoteEl.style.display = 'none';
+    drugNoteEl.innerHTML = '';
+  }
   document.getElementById('modalDrugLabel').textContent = d.name + ' に資料を登録';
   renderResources();
   renderSiteLinks();

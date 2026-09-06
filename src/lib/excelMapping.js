@@ -16,7 +16,8 @@ export const COLUMN_TARGETS = [
   { key: 'url_disease', label: 'URL(疾患向け資料)' },
   { key: 'title_disease', label: '資料タイトル(疾患向けURL用)' },
   { key: 'url_paper', label: 'URL(紙資材取り寄せサイト)' },
-  { key: 'memo', label: 'メモ' },
+  { key: 'memo', label: 'メモ(資料ごとの補足)' },
+  { key: 'note', label: '薬剤の調査メモ(資材なしの理由・閲覧のコツなど)' },
 ];
 
 // 対象(audience)ごとの「URL列」→「タイトル列」の対応。
@@ -114,6 +115,7 @@ export function buildImportPlan(rows, mapping) {
   const yjCol = findCol('yj');
   const categoryCol = findCol('category');
   const makerCol = findCol('maker');
+  const noteCol = findCol('note');
   const memoCols = mapping.reduce((acc, t, i) => (t === 'memo' ? [...acc, i] : acc), []);
   const urlPairs = AUDIENCE_URL_PAIRS.map((p) => ({
     audience: p.audience,
@@ -135,6 +137,7 @@ export function buildImportPlan(rows, mapping) {
       yj: cell(row, yjCol),
       category: cell(row, categoryCol),
       maker: cell(row, makerCol),
+      note: cell(row, noteCol),
     });
 
     const rowMemo = memoCols
