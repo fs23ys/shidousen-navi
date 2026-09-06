@@ -308,7 +308,7 @@ function renderSelection() {
   const drugNoteEl = document.getElementById('drugNote');
   if (d.note && d.note.trim()) {
     drugNoteEl.style.display = 'block';
-    drugNoteEl.innerHTML = `<span class="drug-note-icon">📝</span>${escapeHtml(d.note)}`;
+    drugNoteEl.innerHTML = `<span class="drug-note-icon">調査メモ📝</span>${escapeHtml(d.note)}`;
   } else {
     drugNoteEl.style.display = 'none';
     drugNoteEl.innerHTML = '';

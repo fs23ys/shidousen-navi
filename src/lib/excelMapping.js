@@ -45,8 +45,10 @@ const KEYWORD_RULES = [
   { key: 'yj', words: ['yjコード', 'yj'] },
   { key: 'category', words: ['薬効分類', '分類', '薬効'] },
   { key: 'maker', words: ['メーカー', '製造販売元', '製造元', '会社名'] },
-  { key: 'url_paper', words: ['取り寄せ', '資材取り寄せ'] },
+  // 「メモ(取り寄せ用)」のように"メモ"と"取り寄せ"の両方を含む見出しもあるため、
+  // "メモ"を含む場合はurl_paperより先にmemoと判定する(メモ欄がURL列である可能性は低いため)。
   { key: 'memo', words: ['メモ', '備考', 'memo'] },
+  { key: 'url_paper', words: ['取り寄せ', '資材取り寄せ'] },
   { key: 'url_patient', words: ['url'] }, // 対象キーワードのない「URL」列は患者さん向けと仮定(手動で変更可)
 ];
 
