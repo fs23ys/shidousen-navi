@@ -9,15 +9,15 @@ export const COLUMN_TARGETS = [
   { key: 'yj', label: 'YJコード' },
   { key: 'category', label: '分類（薬効分類など）' },
   { key: 'maker', label: 'メーカー名' },
-  { key: 'url_patient', label: 'URL（患者さん向け資料）' },
-  { key: 'title_patient', label: '資料タイトル（患者さん向けURL用）' },
-  { key: 'url_hcp', label: 'URL（医療関係者向け資料）' },
-  { key: 'title_hcp', label: '資料タイトル（医療関係者向けURL用）' },
-  { key: 'url_disease', label: 'URL（疾患向け資料）' },
-  { key: 'title_disease', label: '資料タイトル（疾患向けURL用）' },
+  { key: 'url_patient', label: 'URL（患者さん向け資材）' },
+  { key: 'title_patient', label: '資材タイトル（患者さん向け用）' },
+  { key: 'url_hcp', label: 'URL（医療関係者向け資材）' },
+  { key: 'title_hcp', label: '資材タイトル（医療関係者向け用）' },
+  { key: 'url_disease', label: 'URL（疾患向け資材）' },
+  { key: 'title_disease', label: '資材タイトル（疾患向け用）' },
   { key: 'url_paper', label: 'URL（紙資材取り寄せサイト）' },
   { key: 'memo', label: 'メモ（資料ごとの補足）' },
-  { key: 'note', label: '薬剤の調査メモ（資材なしの理由・閲覧のコツなど）' },
+  { key: 'note', label: '資材の調査メモ（資材なしの理由・閲覧のコツなど）' },
 ];
 
 // 対象(audience)ごとの「URL列」→「タイトル列」の対応。
@@ -45,6 +45,9 @@ const KEYWORD_RULES = [
   { key: 'yj', words: ['yjコード', 'yj'] },
   { key: 'category', words: ['薬効分類', '分類', '薬効'] },
   { key: 'maker', words: ['メーカー', '製造販売元', '製造元', '会社名'] },
+  // 「調査メモ」は資材ごとの補足(memo)ではなく薬剤全体の調査メモ(note)を指すことが
+  // ほとんどのため、"メモ"を含む一般的なmemo判定より先にチェックする。
+  { key: 'note', words: ['調査メモ', '調査'] },
   // 「メモ(取り寄せ用)」のように"メモ"と"取り寄せ"の両方を含む見出しもあるため、
   // "メモ"を含む場合はurl_paperより先にmemoと判定する(メモ欄がURL列である可能性は低いため)。
   { key: 'memo', words: ['メモ', '備考', 'memo'] },
