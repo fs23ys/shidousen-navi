@@ -4,20 +4,20 @@
 // 同じ薬で同じ対象の資料が複数ある場合は、列を増やすのではなく行を増やして記入する運用のため、
 // 各対象のURL列・タイトル列は1本ずつでよい(複数分は行の重複として現れ、薬剤側でマージされる)。
 export const COLUMN_TARGETS = [
-  { key: 'none', label: '(使わない)' },
+  { key: 'none', label: '（使わない）' },
   { key: 'name', label: '薬剤名' },
   { key: 'yj', label: 'YJコード' },
-  { key: 'category', label: '分類(薬効分類など)' },
+  { key: 'category', label: '分類（薬効分類など）' },
   { key: 'maker', label: 'メーカー名' },
-  { key: 'url_patient', label: 'URL(患者さん向け資料)' },
-  { key: 'title_patient', label: '資料タイトル(患者さん向けURL用)' },
-  { key: 'url_hcp', label: 'URL(医療関係者向け資料)' },
-  { key: 'title_hcp', label: '資料タイトル(医療関係者向けURL用)' },
-  { key: 'url_disease', label: 'URL(疾患向け資料)' },
-  { key: 'title_disease', label: '資料タイトル(疾患向けURL用)' },
-  { key: 'url_paper', label: 'URL(紙資材取り寄せサイト)' },
-  { key: 'memo', label: 'メモ(資料ごとの補足)' },
-  { key: 'note', label: '薬剤の調査メモ(資材なしの理由・閲覧のコツなど)' },
+  { key: 'url_patient', label: 'URL（患者さん向け資料）' },
+  { key: 'title_patient', label: '資料タイトル（患者さん向けURL用）' },
+  { key: 'url_hcp', label: 'URL（医療関係者向け資料）' },
+  { key: 'title_hcp', label: '資料タイトル（医療関係者向けURL用）' },
+  { key: 'url_disease', label: 'URL（疾患向け資料）' },
+  { key: 'title_disease', label: '資料タイトル（疾患向けURL用）' },
+  { key: 'url_paper', label: 'URL（紙資材取り寄せサイト）' },
+  { key: 'memo', label: 'メモ（資料ごとの補足）' },
+  { key: 'note', label: '薬剤の調査メモ（資材なしの理由・閲覧のコツなど）' },
 ];
 
 // 対象(audience)ごとの「URL列」→「タイトル列」の対応。
