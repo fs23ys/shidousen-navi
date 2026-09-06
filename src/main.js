@@ -789,47 +789,77 @@ document.getElementById('excelCancelBtn').addEventListener('click', () => {
   excelState = null;
 });
 
-document.getElementById('excelImportBtn').addEventListener('click', async () => {
-  if (!excelState || !excelState.mapping.includes('name')) {
-    showToast('薬剤名の列を選んでください');
-    return;
-  }
+// 現在のexcelStateの内容で、薬剤・資料それぞれの追加/更新/削除計画を計算する。
+// Firestoreへの書き込みは一切行わない(プレビュー・書き出し・実際の取込処理で共通利用する)。
+function planExcelSync() {
   const { drugs: incomingDrugs, resources: incomingResources } = buildImportPlan(excelState.rows, excelState.mapping);
 
   // 採用医薬品リストは「完全同期」:最新の取込内容に薬剤一覧を合わせる。
   // 取込内容にない既存の薬は削除し、その薬に紐づく登録済み資料も一緒に削除する。
   const drugPlan = planDrugSync(drugs, incomingDrugs);
-  const drugsToDeleteResourceCount = drugPlan.toDelete.reduce(
-    (sum, d) => sum + resources.filter((r) => r.drugId === d.id).length,
-    0,
-  );
+  const deleteDrugIds = new Set(drugPlan.toDelete.map((d) => d.id));
 
   // 資料側も完全同期する準備:薬が残る場合でも、その薬についてExcelに書かれていない資料
   // (以前の取込バグなどで別の薬に紛れ込んだものを含む)は削除候補として数える。
   // ただしアプリ内にアップロードしたPDF(storagePathあり)はExcelから来たものではないため対象外。
-  const deleteDrugIdsPreview = new Set(drugPlan.toDelete.map((d) => d.id));
-  const keptExistingDrugIds = new Set(drugs.filter((d) => !deleteDrugIdsPreview.has(d.id)).map((d) => d.id));
+  const keptExistingDrugIds = new Set(drugs.filter((d) => !deleteDrugIds.has(d.id)).map((d) => d.id));
   const drugIdMapPreview = drugPlan.resolveIds([]);
-  const expectedByDrugPreview = new Map();
+  const expectedByDrug = new Map();
   incomingResources.forEach((r) => {
     const localDrugId = drugIdMapPreview.get(r.tempDrugId);
     if (!localDrugId) return;
     const key = `${r.type}|${r.type === 'paper' ? r.paperContact : r.url}`;
-    if (!expectedByDrugPreview.has(localDrugId)) expectedByDrugPreview.set(localDrugId, new Set());
-    expectedByDrugPreview.get(localDrugId).add(key);
+    if (!expectedByDrug.has(localDrugId)) expectedByDrug.set(localDrugId, new Set());
+    expectedByDrug.get(localDrugId).add(key);
   });
-  const resourcesToPruneCount = resources.filter(
+  const resourcesToPrune = resources.filter(
     (r) =>
       keptExistingDrugIds.has(r.drugId) &&
       !r.storagePath &&
-      !(expectedByDrugPreview.get(r.drugId) || new Set()).has(`${r.type}|${r.type === 'paper' ? r.paperContact : r.url}`),
-  ).length;
+      !(expectedByDrug.get(r.drugId) || new Set()).has(`${r.type}|${r.type === 'paper' ? r.paperContact : r.url}`),
+  );
+  const deletedDrugsResources = resources.filter((r) => deleteDrugIds.has(r.drugId));
+
+  return { incomingDrugs, incomingResources, drugPlan, keptExistingDrugIds, expectedByDrug, resourcesToPrune, deletedDrugsResources };
+}
+
+document.getElementById('excelExportDeletedBtn').addEventListener('click', () => {
+  if (!excelState || !excelState.mapping.includes('name')) {
+    showToast('薬剤名の列を選んでください');
+    return;
+  }
+  const { drugPlan, resourcesToPrune, deletedDrugsResources } = planExcelSync();
+  if (drugPlan.toDelete.length === 0 && resourcesToPrune.length === 0) {
+    showToast('今回削除される薬・資料はありません');
+    return;
+  }
+  downloadJson(
+    {
+      exportedAt: new Date().toISOString(),
+      note: 'この内容で取り込んだ場合に削除される予定のデータ(実行前のプレビュー)',
+      deletedDrugs: drugPlan.toDelete,
+      deletedDrugsResources,
+      prunedResources: resourcesToPrune,
+    },
+    'shidousen-navi-to-be-deleted',
+  );
+  showToast(
+    `削除予定データを書き出しました(薬${drugPlan.toDelete.length}件・資料${deletedDrugsResources.length + resourcesToPrune.length}件)`,
+  );
+});
+
+document.getElementById('excelImportBtn').addEventListener('click', async () => {
+  if (!excelState || !excelState.mapping.includes('name')) {
+    showToast('薬剤名の列を選んでください');
+    return;
+  }
+  const { incomingResources, drugPlan, resourcesToPrune, deletedDrugsResources } = planExcelSync();
 
   const confirmMsg =
     `薬剤: 追加${drugPlan.toAdd.length}件・更新${drugPlan.toUpdate.length}件・削除${drugPlan.toDelete.length}件\n` +
-    (drugPlan.toDelete.length > 0 ? `(削除される薬剤に紐づく資料も${drugsToDeleteResourceCount}件削除されます)\n` : '') +
-    (resourcesToPruneCount > 0
-      ? `資料: 今のExcelに記載がなくなった資料を${resourcesToPruneCount}件削除します(アップロード済みPDFは対象外)\n`
+    (drugPlan.toDelete.length > 0 ? `(削除される薬剤に紐づく資料も${deletedDrugsResources.length}件削除されます)\n` : '') +
+    (resourcesToPrune.length > 0
+      ? `資料: 今のExcelに記載がなくなった資料を${resourcesToPrune.length}件削除します(アップロード済みPDFは対象外)\n`
       : '') +
     `この内容で採用医薬品リストを更新しますか?`;
   if (!window.confirm(confirmMsg)) return;
@@ -845,9 +875,8 @@ document.getElementById('excelImportBtn').addEventListener('click', async () => 
     // 削除される薬に紐づく資料と、アップロード済みPDFファイルを削除する
     const deleteDrugIds = drugPlan.toDelete.map((d) => d.id);
     if (deleteDrugIds.length > 0) {
-      const resourcesToDelete = resources.filter((r) => deleteDrugIds.includes(r.drugId));
-      await Promise.all(resourcesToDelete.filter((r) => r.storagePath).map((r) => deleteResourceFile(r.storagePath)));
-      if (resourcesToDelete.length > 0) await deleteResourcesBatch(resourcesToDelete.map((r) => r.id));
+      await Promise.all(deletedDrugsResources.filter((r) => r.storagePath).map((r) => deleteResourceFile(r.storagePath)));
+      if (deletedDrugsResources.length > 0) await deleteResourcesBatch(deletedDrugsResources.map((r) => r.id));
       await deleteDrugsBatch(deleteDrugIds);
       if (deleteDrugIds.includes(selectedDrugId)) {
         selectedDrugId = null;
@@ -892,14 +921,7 @@ document.getElementById('excelImportBtn').addEventListener('click', async () => 
 
     // 薬は残るが、今のExcelにはもう書かれていない資料を削除する(以前の取込バグ等で
     // 別の薬に紛れ込んだ資料の掃除も兼ねる)。アップロード済みPDFは対象外。
-    const resourcesToPrune = resources.filter(
-      (r) =>
-        keptExistingDrugIds.has(r.drugId) &&
-        !r.storagePath &&
-        !(expectedByDrugPreview.get(r.drugId) || new Set()).has(
-          `${r.type}|${r.type === 'paper' ? r.paperContact : r.url}`,
-        ),
-    );
+    // (この一覧はconfirm前のplanExcelSync()の時点で既に計算済みのものを使う)
     if (resourcesToPrune.length > 0) await deleteResourcesBatch(resourcesToPrune.map((r) => r.id));
 
     excelModal.classList.remove('open');

@@ -275,9 +275,12 @@
         <tbody id="excelMapBody"></tbody>
       </table>
       <div class="map-preview" id="excelPreview"></div>
-      <div class="modal-actions">
-        <button class="btn-cancel" id="excelCancelBtn">キャンセル</button>
-        <button class="btn-save" id="excelImportBtn">この内容で取り込む</button>
+      <div class="modal-actions" style="justify-content:space-between;">
+        <button class="btn-cancel" id="excelExportDeletedBtn" style="flex:none;" title="この内容で取り込んだ場合に削除される薬・資料だけをJSONで書き出します(取込は実行しません)">🗑 削除予定のデータだけ書き出す</button>
+        <div style="display:flex; gap:10px; flex:none;">
+          <button class="btn-cancel" id="excelCancelBtn">キャンセル</button>
+          <button class="btn-save" id="excelImportBtn">この内容で取り込む</button>
+        </div>
       </div>
       <p class="import-summary" id="excelSummary"></p>
     </div>
