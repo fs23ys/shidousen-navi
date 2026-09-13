@@ -109,6 +109,9 @@ function renderFavoritesModal() {
     .map((r) => {
       const d = drugs.find((x) => x.id === r.drugId);
       const aud = AUDIENCE_META[r.audience] || AUDIENCE_META.patient;
+      // 紙資材は種類の色(クレイ)のまま、Web資料だけ対象別の色にする
+      const tabColor = r.type === 'paper' ? TYPE_META.paper.color : aud.color;
+      const tabTint = r.type === 'paper' ? TYPE_META.paper.tint : aud.tint;
       const icon = r.type === 'paper' ? '📦' : r.storagePath ? '📄' : '🌐';
       const openBtn =
         r.type === 'web'
@@ -116,7 +119,7 @@ function renderFavoritesModal() {
           : /^https?:\/\//i.test(r.paperContact || '')
             ? `<a href="${escapeHtml(r.paperContact)}" target="_blank" rel="noopener">📦 取り寄せ ↗</a>`
             : '';
-      return `<div class="res-card" style="--tab-color:${aud.color};--tab-tint:${aud.tint}">
+      return `<div class="res-card" style="--tab-color:${tabColor};--tab-tint:${tabTint}">
         <div class="res-top">
           <span class="res-icon">${icon}</span>
           <div class="res-title">${escapeHtml(r.title)}
@@ -369,6 +372,9 @@ function renderResources() {
     .map((r) => {
       const meta = TYPE_META[r.type];
       const aud = AUDIENCE_META[r.audience] || AUDIENCE_META.patient;
+      // 紙資材は種類の色(クレイ)のまま、Web資料だけ対象別の色にする
+      const tabColor = r.type === 'paper' ? meta.color : aud.color;
+      const tabTint = r.type === 'paper' ? meta.tint : aud.tint;
       const icon = r.type === 'paper' ? '📦' : r.storagePath ? '📄' : '🌐';
       let detail = '';
       let action = '';
@@ -389,7 +395,7 @@ function renderResources() {
           ? `<a href="${escapeHtml(r.paperContact)}" target="_blank" rel="noopener">📦 紙資材を取り寄せ ↗</a>`
           : `<button data-action="copy" data-text="${escapeHtml(r.paperContact || '')}">連絡先をコピー</button>`;
       }
-      return `<div class="res-card" style="--tab-color:${aud.color};--tab-tint:${aud.tint}">
+      return `<div class="res-card" style="--tab-color:${tabColor};--tab-tint:${tabTint}">
         <div class="res-top">
           <span class="res-icon">${icon}</span>
           <div class="res-title">${escapeHtml(r.title)}</div>
