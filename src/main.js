@@ -108,7 +108,7 @@ function renderFavoritesModal() {
   favoritesList.innerHTML = favs
     .map((r) => {
       const d = drugs.find((x) => x.id === r.drugId);
-      const meta = TYPE_META[r.type];
+      const aud = AUDIENCE_META[r.audience] || AUDIENCE_META.patient;
       const icon = r.type === 'paper' ? '📦' : r.storagePath ? '📄' : '🌐';
       const openBtn =
         r.type === 'web'
@@ -116,7 +116,7 @@ function renderFavoritesModal() {
           : /^https?:\/\//i.test(r.paperContact || '')
             ? `<a href="${escapeHtml(r.paperContact)}" target="_blank" rel="noopener">📦 取り寄せ ↗</a>`
             : '';
-      return `<div class="res-card" style="--tab-color:${meta.color};--tab-tint:${meta.tint}">
+      return `<div class="res-card" style="--tab-color:${aud.color};--tab-tint:${aud.tint}">
         <div class="res-top">
           <span class="res-icon">${icon}</span>
           <div class="res-title">${escapeHtml(r.title)}
@@ -389,7 +389,7 @@ function renderResources() {
           ? `<a href="${escapeHtml(r.paperContact)}" target="_blank" rel="noopener">📦 紙資材を取り寄せ ↗</a>`
           : `<button data-action="copy" data-text="${escapeHtml(r.paperContact || '')}">連絡先をコピー</button>`;
       }
-      return `<div class="res-card" style="--tab-color:${meta.color};--tab-tint:${meta.tint}">
+      return `<div class="res-card" style="--tab-color:${aud.color};--tab-tint:${aud.tint}">
         <div class="res-top">
           <span class="res-icon">${icon}</span>
           <div class="res-title">${escapeHtml(r.title)}</div>
