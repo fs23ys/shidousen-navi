@@ -16,7 +16,7 @@ export const COLUMN_TARGETS = [
   { key: 'url_disease', label: 'URL（疾患向け資材）' },
   { key: 'title_disease', label: '資材タイトル（疾患向け用）' },
   { key: 'url_paper', label: 'URL（紙資材取り寄せサイト）' },
-  { key: 'memo', label: 'メモ（資料ごとの補足）' },
+  { key: 'memo', label: '紙資材取り寄せ用メモ' },
   { key: 'note', label: '資材の調査メモ（資材なしの理由・閲覧のコツなど）' },
 ];
 
