@@ -304,6 +304,7 @@ function renderSelection() {
   document.getElementById('selDrugCode').textContent = d.category || '';
   document.getElementById('selDrugCodes').innerHTML = `
     <span class="code-item"><span class="k">YJ</span>${escapeHtml(d.yj || '')}</span>
+    ${d.maker ? `<span class="code-item"><span class="k">メーカー</span>${escapeHtml(d.maker)}</span>` : ''}
   `;
   const drugNoteEl = document.getElementById('drugNote');
   if (d.note && d.note.trim()) {
