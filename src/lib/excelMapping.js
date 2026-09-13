@@ -148,6 +148,8 @@ export function buildImportPlan(rows, mapping) {
       note: cell(row, noteCol),
     });
 
+    // メモ(取り寄せ用)は「紙資材の取り寄せ」についての補足のため、Web資料には付けず
+    // 資材取り寄せサイト(type='paper')の資料にだけ載せる。
     const rowMemo = memoCols
       .map((c) => cell(row, c))
       .filter(Boolean)
@@ -156,7 +158,7 @@ export function buildImportPlan(rows, mapping) {
     urlPairs.forEach(({ audience, urlCol, titleCol }) => {
       const url = cell(row, urlCol);
       if (!url) return;
-      resources.push({ tempDrugId: tempId, type: 'web', url, audience, title: cell(row, titleCol), memo: rowMemo });
+      resources.push({ tempDrugId: tempId, type: 'web', url, audience, title: cell(row, titleCol), memo: '' });
     });
 
     // 資材取り寄せサイト:紙資材(現物)の注文ページへのリンク。type='paper'として登録し、
