@@ -334,14 +334,19 @@ function circledPrefixNumber(title) {
   const idx = CIRCLED_NUMBERS.indexOf(ch);
   return idx === -1 ? null : idx + 1;
 }
+// 患者さん向け→医療関係者向け→疾患向け→紙資材の取り寄せ、の順に並べる。
+// 紙資材は対象がpatient固定でも常に一番下に来るよう種類で先に判定する。
+const AUDIENCE_ORDER = { patient: 0, hcp: 1, disease: 2 };
+function resourceGroupRank(r) {
+  return r.type === 'paper' ? 3 : (AUDIENCE_ORDER[r.audience] ?? 0);
+}
 function sortByCircledPrefix(list) {
   return list
     .map((r, i) => ({ r, i }))
     .sort((a, b) => {
-      // 紙資材の取り寄せは種類を問わず常に一番下に固定する
-      const ap = a.r.type === 'paper' ? 1 : 0;
-      const bp = b.r.type === 'paper' ? 1 : 0;
-      if (ap !== bp) return ap - bp;
+      const ar = resourceGroupRank(a.r);
+      const br = resourceGroupRank(b.r);
+      if (ar !== br) return ar - br;
       const an = circledPrefixNumber(a.r.title);
       const bn = circledPrefixNumber(b.r.title);
       if (an != null && bn != null) return an - bn || a.i - b.i;
