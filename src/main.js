@@ -870,6 +870,15 @@ function pairPaperResources(existingList, incomingRows) {
   return result;
 }
 
+// 同じ薬・同じ取り寄せ先URLの行が複数あっても、メモの内容(空欄も含む)が同じなら
+// 単に同じ資材を指す重複行とみなし、1件にまとめる。メモの内容が違う場合だけ
+// (エフピーのように複数の異なる資材を案内している場合)別々に登録する。
+function pushUniquePaperRow(group, r) {
+  const memo = r.memo || '';
+  if (group.some((item) => (item.memo || '') === memo)) return;
+  group.push(r);
+}
+
 // resourcesをdrugId+URLごとにグルーピングするヘルパー(紙資材のペアリング用)
 function groupPaperByKey(list) {
   const map = new Map();
@@ -907,7 +916,7 @@ function planExcelSync() {
     if (r.type === 'paper') {
       const gk = `${localDrugId}|${r.paperContact || ''}`;
       if (!incomingPaperByGroup.has(gk)) incomingPaperByGroup.set(gk, []);
-      incomingPaperByGroup.get(gk).push(r);
+      pushUniquePaperRow(incomingPaperByGroup.get(gk), r);
     } else {
       const key = resourceMatchKey(r);
       if (!expectedWebByDrug.has(localDrugId)) expectedWebByDrug.set(localDrugId, new Set());
@@ -1014,7 +1023,11 @@ document.getElementById('excelImportBtn').addEventListener('click', async () => 
       if (r.type === 'paper') {
         const gk = `${localDrugId}|${r.paperContact || ''}`;
         if (!incomingPaperByGroup.has(gk)) incomingPaperByGroup.set(gk, []);
-        incomingPaperByGroup.get(gk).push({ r, localDrugId });
+        const group = incomingPaperByGroup.get(gk);
+        // 同じURL+同じメモ(空欄含む)の重複行はまとめて1件にする
+        if (!group.some((entry) => (entry.r.memo || '') === (r.memo || ''))) {
+          group.push({ r, localDrugId });
+        }
         return;
       }
       const title = (r.title && r.title.trim()) || titleFromUrl(r.url);
