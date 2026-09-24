@@ -391,8 +391,10 @@ function renderResources() {
         if (r.storagePath) {
           detail = `<div class="res-detail">📎 アプリ内に保存したPDF(外部サイトの状態に関わらず開けます)</div>`;
           if (r.sourceUrl) {
-            detail += `<div class="res-detail"><span class="k">元のURL</span><a href="${escapeHtml(r.sourceUrl)}" target="_blank" rel="noopener">${escapeHtml(r.sourceUrl)}</a>(ログイン等が必要な場合があります)</div>`;
+            detail += `<div class="res-detail"><span class="k">元のURL</span><a href="${escapeHtml(r.sourceUrl)}" target="_blank" rel="noopener">${escapeHtml(r.sourceUrl)}</a></div>`;
           }
+        } else if (r.requiresLogin) {
+          detail = `<div class="res-detail">🔒 medパス・m3など会員ログインが必要な資材です</div>`;
         }
       } else {
         const contactIsUrl = /^https?:\/\//i.test(r.paperContact || '');
@@ -411,6 +413,7 @@ function renderResources() {
             <button class="fav-btn ${r.favorite ? 'is-fav' : ''}" data-action="favorite" data-id="${r.id}" title="お気に入り">${r.favorite ? '★' : '☆'}</button>
             <span class="res-type-chip">${meta.label}</span>
             <span class="aud-chip" style="--aud-color:${aud.color};--aud-tint:${aud.tint}">${aud.label}</span>
+            ${r.requiresLogin ? `<span class="aud-chip" style="--aud-color:#B05C5C;--aud-tint:#F6DEDE;" title="medパス・m3など会員ログインが必要な資材">🔒 要ログイン</span>` : ''}
           </div>
         </div>
         ${detail}
@@ -560,6 +563,7 @@ function renderSiteLinks() {
 /* ---------------- ADD / EDIT RESOURCE MODAL ---------------- */
 const addModal = document.getElementById('addModal');
 const fUrl = document.getElementById('fUrl');
+const fRequiresLogin = document.getElementById('fRequiresLogin');
 const fFile = document.getElementById('fFile');
 const fFileCurrent = document.getElementById('fFileCurrent');
 const fTitle = document.getElementById('fTitle');
@@ -589,6 +593,7 @@ function openAddModal() {
   setType(currentType); // 前回選んだ種類を維持
   setAudience(currentAudience); // 前回選んだ対象を維持
   [fTitle, fUrl, fPaperFrom, fPaperContact, fMemo].forEach((el) => (el.value = ''));
+  fRequiresLogin.checked = false;
   fFile.value = '';
   fFileCurrent.textContent = '';
   setTimeout(() => {
@@ -607,6 +612,7 @@ function openEditModal(resourceId) {
   setAudience(r.audience || 'patient');
   fTitle.value = r.title || '';
   fUrl.value = r.url || '';
+  fRequiresLogin.checked = !!r.requiresLogin;
   fPaperFrom.value = r.paperFrom || '';
   fPaperContact.value = r.paperContact || '';
   fMemo.value = r.memo || '';
@@ -689,6 +695,7 @@ async function saveResource() {
     const fields = { type: currentType, title, memo, audience: currentAudience };
     if (currentType === 'web') {
       fields.url = url;
+      fields.requiresLogin = fRequiresLogin.checked || undefined;
       fields.paperFrom = undefined;
       fields.paperContact = undefined;
       if (storagePath) {
@@ -707,6 +714,7 @@ async function saveResource() {
       fields.paperContact = fPaperContact.value.trim();
       fields.url = undefined;
       fields.sourceUrl = undefined;
+      fields.requiresLogin = undefined;
       if (editingBefore?.storagePath) {
         fields.storagePath = undefined;
         await deleteResourceFile(editingBefore.storagePath);
