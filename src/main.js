@@ -390,6 +390,9 @@ function renderResources() {
         printBtn = `<button data-action="print" data-url="${escapeHtml(r.url || '')}">🖨️ 開く・印刷</button>`;
         if (r.storagePath) {
           detail = `<div class="res-detail">📎 アプリ内に保存したPDF(外部サイトの状態に関わらず開けます)</div>`;
+          if (r.sourceUrl) {
+            detail += `<div class="res-detail"><span class="k">元のURL</span><a href="${escapeHtml(r.sourceUrl)}" target="_blank" rel="noopener">${escapeHtml(r.sourceUrl)}</a>(ログイン等が必要な場合があります)</div>`;
+          }
         }
       } else {
         const contactIsUrl = /^https?:\/\//i.test(r.paperContact || '');
@@ -655,8 +658,17 @@ async function saveResource() {
   saveBtn.disabled = true;
   try {
     let storagePath;
+    // medパス・m3など会員ログインが必要なサイトのURLを記録として残しつつ、
+    // 実際に開く際はアプリ内保存したPDF(ログイン不要)を使えるようにするため、
+    // ファイルをアップロードする直前に入力欄にあったURLを「元のURL」として保持する。
+    // 新しいファイルをアップロードしない編集では、既存の元のURLをそのまま引き継ぐ。
+    let sourceUrl = editingBefore?.sourceUrl;
     if (currentType === 'web' && file) {
       saveBtn.innerHTML = `<span class="spinner-inline"></span>アップロード中…`;
+      // 既にアップロード済みのファイルを別のファイルに差し替えるだけの場合、入力欄には
+      // ストレージのURLが表示されているため、それをsourceUrlとして誤って上書きしない。
+      // 初めてアップロードする場合だけ、入力欄にあった元のURLをsourceUrlとして保持する。
+      if (!editingBefore?.storagePath) sourceUrl = url || undefined;
       const uploaded = await uploadResourceFile(selectedDrugId, file);
       url = uploaded.url;
       storagePath = uploaded.storagePath;
@@ -681,15 +693,20 @@ async function saveResource() {
       fields.paperContact = undefined;
       if (storagePath) {
         fields.storagePath = storagePath;
+        fields.sourceUrl = sourceUrl;
       } else if (editingBefore?.storagePath && url !== editingBefore.url) {
         // アップロード済みファイルのURLから、手動で別のURLに書き換えられた場合は紐付けを解除する
         fields.storagePath = undefined;
+        fields.sourceUrl = undefined;
         await deleteResourceFile(editingBefore.storagePath);
+      } else {
+        fields.sourceUrl = sourceUrl;
       }
     } else {
       fields.paperFrom = fPaperFrom.value.trim();
       fields.paperContact = fPaperContact.value.trim();
       fields.url = undefined;
+      fields.sourceUrl = undefined;
       if (editingBefore?.storagePath) {
         fields.storagePath = undefined;
         await deleteResourceFile(editingBefore.storagePath);
