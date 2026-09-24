@@ -826,14 +826,59 @@ document.getElementById('excelCancelBtn').addEventListener('click', () => {
   excelState = null;
 });
 
-// 資料が「同じ資料かどうか」を判定するためのキー。紙資材は同じ取り寄せ先URL(注文ページ)で
-// 複数の異なる資材(パンフレットなど)を案内していることがあるため、URLだけでなくメモも
-// 含めて区別する(でないと2件目以降が「同じ資料」とみなされ取り込まれない)。
-// Web資料はURLだけで十分区別できるため、メモは含めない。
+// Web資料は「種類+URL」だけで十分同じ資料かどうか区別できる。
 function resourceMatchKey(r) {
-  const isPaper = r.type === 'paper';
-  const base = `${r.type}|${isPaper ? r.paperContact || '' : r.url || ''}`;
-  return isPaper ? `${base}|${r.memo || ''}` : base;
+  return `${r.type}|${r.url || ''}`;
+}
+
+// 紙資材(資材取り寄せサイト)は、同じ取り寄せ先URL(注文ページ)で複数の異なる資材
+// (パンフレットなど)を案内していることがある。当初は判定にメモの内容も使っていたが、
+// カードのメモ・タイトルを見やすく手動編集しただけで「別の資料」とみなされ、
+// 編集内容が再取込のたびに消えてしまう不具合があった。
+// そこで、初回登録時のExcel側メモを sourceMemo として固定で保持し、以後はそれで
+// 同一性を判定する(表示用のmemoを後から編集しても影響しない)。
+// まだsourceMemoを持たない過去の資料は、同じURLのグループ内でExcelの登場順と
+// 対応づけて、一度だけsourceMemoを補完する(タイトル・メモ自体は書き換えない)。
+// 戻り値: incomingRowsと同じ順序で、対応する既存資料(見つからなければnull)の配列。
+function pairPaperResources(existingList, incomingRows) {
+  const bySourceMemo = new Map();
+  existingList.forEach((e) => {
+    if (e.sourceMemo == null) return;
+    if (!bySourceMemo.has(e.sourceMemo)) bySourceMemo.set(e.sourceMemo, []);
+    bySourceMemo.get(e.sourceMemo).push(e);
+  });
+  const consumed = new Set();
+  const result = incomingRows.map((r) => {
+    const bucket = bySourceMemo.get(r.memo || '');
+    if (bucket && bucket.length > 0) {
+      const match = bucket.shift();
+      consumed.add(match.id);
+      return match;
+    }
+    return null;
+  });
+  const legacyPool = existingList.filter((e) => e.sourceMemo == null && !consumed.has(e.id));
+  let li = 0;
+  for (let i = 0; i < result.length; i++) {
+    if (result[i] != null) continue;
+    if (li < legacyPool.length) {
+      result[i] = legacyPool[li];
+      consumed.add(legacyPool[li].id);
+      li += 1;
+    }
+  }
+  return result;
+}
+
+// resourcesをdrugId+URLごとにグルーピングするヘルパー(紙資材のペアリング用)
+function groupPaperByKey(list) {
+  const map = new Map();
+  list.forEach((r) => {
+    const gk = `${r.drugId}|${r.paperContact || ''}`;
+    if (!map.has(gk)) map.set(gk, []);
+    map.get(gk).push(r);
+  });
+  return map;
 }
 
 // 現在のexcelStateの内容で、薬剤・資料それぞれの追加/更新/削除計画を計算する。
@@ -851,23 +896,41 @@ function planExcelSync() {
   // ただしアプリ内にアップロードしたPDF(storagePathあり)はExcelから来たものではないため対象外。
   const keptExistingDrugIds = new Set(drugs.filter((d) => !deleteDrugIds.has(d.id)).map((d) => d.id));
   const drugIdMapPreview = drugPlan.resolveIds([]);
-  const expectedByDrug = new Map();
+
+  // Web資料は種類+URLで一致判定(従来通り)。紙資材はURLが重複しうるため、
+  // ドラッグ+URLのグループごとにペアリングして一致する既存資料を特定する。
+  const expectedWebByDrug = new Map();
+  const incomingPaperByGroup = new Map();
   incomingResources.forEach((r) => {
     const localDrugId = drugIdMapPreview.get(r.tempDrugId);
     if (!localDrugId) return;
-    const key = resourceMatchKey(r);
-    if (!expectedByDrug.has(localDrugId)) expectedByDrug.set(localDrugId, new Set());
-    expectedByDrug.get(localDrugId).add(key);
+    if (r.type === 'paper') {
+      const gk = `${localDrugId}|${r.paperContact || ''}`;
+      if (!incomingPaperByGroup.has(gk)) incomingPaperByGroup.set(gk, []);
+      incomingPaperByGroup.get(gk).push(r);
+    } else {
+      const key = resourceMatchKey(r);
+      if (!expectedWebByDrug.has(localDrugId)) expectedWebByDrug.set(localDrugId, new Set());
+      expectedWebByDrug.get(localDrugId).add(key);
+    }
   });
-  const resourcesToPrune = resources.filter(
-    (r) =>
-      keptExistingDrugIds.has(r.drugId) &&
-      !r.storagePath &&
-      !(expectedByDrug.get(r.drugId) || new Set()).has(resourceMatchKey(r)),
-  );
+  const existingPaperByGroup = groupPaperByKey(resources.filter((r) => r.type === 'paper'));
+  const matchedPaperIds = new Set();
+  incomingPaperByGroup.forEach((rows, gk) => {
+    pairPaperResources(existingPaperByGroup.get(gk) || [], rows).forEach((e) => {
+      if (e) matchedPaperIds.add(e.id);
+    });
+  });
+
+  const resourcesToPrune = resources.filter((r) => {
+    if (!keptExistingDrugIds.has(r.drugId) || r.storagePath) return false;
+    return r.type === 'paper'
+      ? !matchedPaperIds.has(r.id)
+      : !(expectedWebByDrug.get(r.drugId) || new Set()).has(resourceMatchKey(r));
+  });
   const deletedDrugsResources = resources.filter((r) => deleteDrugIds.has(r.drugId));
 
-  return { incomingDrugs, incomingResources, drugPlan, keptExistingDrugIds, expectedByDrug, resourcesToPrune, deletedDrugsResources };
+  return { incomingDrugs, incomingResources, drugPlan, keptExistingDrugIds, resourcesToPrune, deletedDrugsResources };
 }
 
 document.getElementById('excelExportDeletedBtn').addEventListener('click', () => {
@@ -935,35 +998,67 @@ document.getElementById('excelImportBtn').addEventListener('click', async () => 
     // 資料側(Excelの資料列から来たもの)は、type・URL(紙の場合は連絡方法)が一致すれば「同じ資料」とみなす。
     // 一致した場合、タイトル/メモがExcel側と違えば最新の内容(D/F/H列など)に更新する。
     // これにより、旧仕様の取込で自動生成タイトルのままになっている資料も、再取込するだけで直る。
-    const existingByKey = new Map(resources.map((r) => [`${r.drugId}|${resourceMatchKey(r)}`, r]));
-    const seenKeys = new Set();
+    // Web資料は種類+URLで一致判定(従来通り)。紙資材は同じURLで複数の資材を案内している
+    // ことがあるため、drugId+URLのグループごとにペアリングして一致する既存資料を特定する
+    // (詳細はpairPaperResourcesのコメントを参照)。
+    const existingWebByKey = new Map(
+      resources.filter((r) => r.type !== 'paper').map((r) => [`${r.drugId}|${resourceMatchKey(r)}`, r]),
+    );
+    const seenWebKeys = new Set();
     const resourcesToAdd = [];
     const resourcesToUpdate = [];
+    const incomingPaperByGroup = new Map();
     incomingResources.forEach((r) => {
       const localDrugId = drugIdMap.get(r.tempDrugId);
       if (!localDrugId) return;
-      const isPaper = r.type === 'paper';
+      if (r.type === 'paper') {
+        const gk = `${localDrugId}|${r.paperContact || ''}`;
+        if (!incomingPaperByGroup.has(gk)) incomingPaperByGroup.set(gk, []);
+        incomingPaperByGroup.get(gk).push({ r, localDrugId });
+        return;
+      }
+      const title = (r.title && r.title.trim()) || titleFromUrl(r.url);
       const memo = r.memo || '';
       const key = `${localDrugId}|${resourceMatchKey(r)}`;
-      if (seenKeys.has(key)) return;
-      seenKeys.add(key);
-      const existing = existingByKey.get(key);
+      if (seenWebKeys.has(key)) return;
+      seenWebKeys.add(key);
+      const existing = existingWebByKey.get(key);
       if (existing) {
-        // 紙資材はExcel側にタイトル専用の列がなく、常に既定値「紙資材の取り寄せ」に
-        // なってしまうため、既存資料のタイトルは上書きせず維持する(手動で付けたタイトルを
-        // 再取込のたびに消してしまわないようにするため)。Web資料は従来通り最新化する。
-        const title = isPaper ? existing.title : (r.title && r.title.trim()) || titleFromUrl(r.url);
         if (existing.title !== title || (existing.memo || '') !== memo || existing.audience !== r.audience) {
           resourcesToUpdate.push({ id: existing.id, fields: { title, memo, audience: r.audience } });
         }
         return;
       }
-      const title = (r.title && r.title.trim()) || (isPaper ? '紙資材の取り寄せ' : titleFromUrl(r.url));
-      resourcesToAdd.push(
-        isPaper
-          ? { drugId: localDrugId, type: 'paper', paperFrom: r.paperFrom || '', paperContact: r.paperContact, audience: r.audience, memo, title }
-          : { drugId: localDrugId, type: 'web', url: r.url, audience: r.audience, memo, title },
-      );
+      resourcesToAdd.push({ drugId: localDrugId, type: 'web', url: r.url, audience: r.audience, memo, title });
+    });
+
+    // 紙資材はタイトル・メモを手動編集している可能性があるため、一致した既存資料は
+    // タイトル・メモを一切上書きしない(対象がずれていた場合のみ更新し、sourceMemoが
+    // 未設定なら今回のメモで一度だけ補完する)。一致しなかった分だけ新規追加する。
+    const existingPaperByGroup = groupPaperByKey(resources.filter((r) => r.type === 'paper'));
+    incomingPaperByGroup.forEach((entries, gk) => {
+      const paired = pairPaperResources(existingPaperByGroup.get(gk) || [], entries.map((e) => e.r));
+      entries.forEach(({ r, localDrugId }, i) => {
+        const memo = r.memo || '';
+        const existing = paired[i];
+        if (existing) {
+          const fields = {};
+          if (existing.audience !== r.audience) fields.audience = r.audience;
+          if (existing.sourceMemo == null) fields.sourceMemo = memo;
+          if (Object.keys(fields).length > 0) resourcesToUpdate.push({ id: existing.id, fields });
+          return;
+        }
+        resourcesToAdd.push({
+          drugId: localDrugId,
+          type: 'paper',
+          paperFrom: r.paperFrom || '',
+          paperContact: r.paperContact,
+          audience: r.audience,
+          memo,
+          sourceMemo: memo,
+          title: '紙資材の取り寄せ',
+        });
+      });
     });
     if (resourcesToAdd.length > 0) await addResourcesBatch(resourcesToAdd);
     if (resourcesToUpdate.length > 0) await updateResourcesBatch(resourcesToUpdate);
