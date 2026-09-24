@@ -943,18 +943,22 @@ document.getElementById('excelImportBtn').addEventListener('click', async () => 
       const localDrugId = drugIdMap.get(r.tempDrugId);
       if (!localDrugId) return;
       const isPaper = r.type === 'paper';
-      const title = (r.title && r.title.trim()) || (isPaper ? '紙資材の取り寄せ' : titleFromUrl(r.url));
       const memo = r.memo || '';
       const key = `${localDrugId}|${resourceMatchKey(r)}`;
       if (seenKeys.has(key)) return;
       seenKeys.add(key);
       const existing = existingByKey.get(key);
       if (existing) {
+        // 紙資材はExcel側にタイトル専用の列がなく、常に既定値「紙資材の取り寄せ」に
+        // なってしまうため、既存資料のタイトルは上書きせず維持する(手動で付けたタイトルを
+        // 再取込のたびに消してしまわないようにするため)。Web資料は従来通り最新化する。
+        const title = isPaper ? existing.title : (r.title && r.title.trim()) || titleFromUrl(r.url);
         if (existing.title !== title || (existing.memo || '') !== memo || existing.audience !== r.audience) {
           resourcesToUpdate.push({ id: existing.id, fields: { title, memo, audience: r.audience } });
         }
         return;
       }
+      const title = (r.title && r.title.trim()) || (isPaper ? '紙資材の取り寄せ' : titleFromUrl(r.url));
       resourcesToAdd.push(
         isPaper
           ? { drugId: localDrugId, type: 'paper', paperFrom: r.paperFrom || '', paperContact: r.paperContact, audience: r.audience, memo, title }
