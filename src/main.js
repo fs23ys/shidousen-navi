@@ -818,6 +818,16 @@ document.getElementById('excelCancelBtn').addEventListener('click', () => {
   excelState = null;
 });
 
+// 資料が「同じ資料かどうか」を判定するためのキー。紙資材は同じ取り寄せ先URL(注文ページ)で
+// 複数の異なる資材(パンフレットなど)を案内していることがあるため、URLだけでなくメモも
+// 含めて区別する(でないと2件目以降が「同じ資料」とみなされ取り込まれない)。
+// Web資料はURLだけで十分区別できるため、メモは含めない。
+function resourceMatchKey(r) {
+  const isPaper = r.type === 'paper';
+  const base = `${r.type}|${isPaper ? r.paperContact || '' : r.url || ''}`;
+  return isPaper ? `${base}|${r.memo || ''}` : base;
+}
+
 // 現在のexcelStateの内容で、薬剤・資料それぞれの追加/更新/削除計画を計算する。
 // Firestoreへの書き込みは一切行わない(プレビュー・書き出し・実際の取込処理で共通利用する)。
 function planExcelSync() {
@@ -837,7 +847,7 @@ function planExcelSync() {
   incomingResources.forEach((r) => {
     const localDrugId = drugIdMapPreview.get(r.tempDrugId);
     if (!localDrugId) return;
-    const key = `${r.type}|${r.type === 'paper' ? r.paperContact : r.url}`;
+    const key = resourceMatchKey(r);
     if (!expectedByDrug.has(localDrugId)) expectedByDrug.set(localDrugId, new Set());
     expectedByDrug.get(localDrugId).add(key);
   });
@@ -845,7 +855,7 @@ function planExcelSync() {
     (r) =>
       keptExistingDrugIds.has(r.drugId) &&
       !r.storagePath &&
-      !(expectedByDrug.get(r.drugId) || new Set()).has(`${r.type}|${r.type === 'paper' ? r.paperContact : r.url}`),
+      !(expectedByDrug.get(r.drugId) || new Set()).has(resourceMatchKey(r)),
   );
   const deletedDrugsResources = resources.filter((r) => deleteDrugIds.has(r.drugId));
 
@@ -917,9 +927,7 @@ document.getElementById('excelImportBtn').addEventListener('click', async () => 
     // 資料側(Excelの資料列から来たもの)は、type・URL(紙の場合は連絡方法)が一致すれば「同じ資料」とみなす。
     // 一致した場合、タイトル/メモがExcel側と違えば最新の内容(D/F/H列など)に更新する。
     // これにより、旧仕様の取込で自動生成タイトルのままになっている資料も、再取込するだけで直る。
-    const existingByKey = new Map(
-      resources.map((r) => [`${r.drugId}|${r.type}|${r.type === 'paper' ? r.paperContact : r.url}`, r]),
-    );
+    const existingByKey = new Map(resources.map((r) => [`${r.drugId}|${resourceMatchKey(r)}`, r]));
     const seenKeys = new Set();
     const resourcesToAdd = [];
     const resourcesToUpdate = [];
@@ -929,7 +937,7 @@ document.getElementById('excelImportBtn').addEventListener('click', async () => 
       const isPaper = r.type === 'paper';
       const title = (r.title && r.title.trim()) || (isPaper ? '紙資材の取り寄せ' : titleFromUrl(r.url));
       const memo = r.memo || '';
-      const key = `${localDrugId}|${r.type}|${isPaper ? r.paperContact : r.url}`;
+      const key = `${localDrugId}|${resourceMatchKey(r)}`;
       if (seenKeys.has(key)) return;
       seenKeys.add(key);
       const existing = existingByKey.get(key);
