@@ -827,8 +827,13 @@ document.getElementById('excelCancelBtn').addEventListener('click', () => {
 });
 
 // Web資料は「種類+URL」だけで十分同じ資料かどうか区別できる。
+// ただし、medパス・m3などログインが必要なURLにPDFをアップロード済みの資料は、
+// url が Firebase Storage のアップロード先URLに書き換わっており、Excel側に書かれた
+// 元のURLとは一致しなくなる(元のURLは sourceUrl に退避されている)。
+// これを r.url だけで判定すると、Excel再取込のたびに同じ資料と認識されず、
+// PDF版と元URL版の2件に重複してしまうため、sourceUrl があればそちらを優先する。
 function resourceMatchKey(r) {
-  return `${r.type}|${r.url || ''}`;
+  return `${r.type}|${r.sourceUrl || r.url || ''}`;
 }
 
 // 紙資材(資材取り寄せサイト)は、同じ取り寄せ先URL(注文ページ)で複数の異なる資材
