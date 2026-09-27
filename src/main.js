@@ -210,8 +210,22 @@ function stopSubscriptions() {
 const drugInput = document.getElementById('drugInput');
 const suggestList = document.getElementById('suggestList');
 
-drugInput.addEventListener('input', renderSuggestions);
-drugInput.addEventListener('focus', renderSuggestions);
+// 検索候補は検索欄フォーカス時だけ、検索欄の下にドロップダウンとして表示する。
+function openSuggestDropdown() {
+  renderSuggestions();
+  suggestList.classList.add('open');
+}
+function closeSuggestDropdown() {
+  suggestList.classList.remove('open');
+}
+
+drugInput.addEventListener('input', openSuggestDropdown);
+drugInput.addEventListener('focus', openSuggestDropdown);
+
+// 検索欄の外側をクリック/タップしたらドロップダウンを閉じる
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.search-zone')) closeSuggestDropdown();
+});
 
 // キーボードショートカット:「/」でどこからでも検索欄にフォーカス、検索欄でEscを押すとクリア
 document.addEventListener('keydown', (e) => {
@@ -225,7 +239,7 @@ document.addEventListener('keydown', (e) => {
   }
   if (e.key === 'Escape' && document.activeElement === drugInput) {
     drugInput.value = '';
-    renderSuggestions();
+    closeSuggestDropdown();
     drugInput.blur();
   }
 });
@@ -238,7 +252,7 @@ function pushRecentDrug(id) {
   localStorage.setItem('shidousen.recentDrugIds', JSON.stringify(recentDrugIds));
 }
 
-// 検索結果リストは常時表示(左カラムに固定)。
+// 検索結果は検索欄フォーカス時のドロップダウンに表示する(openSuggestDropdown経由)。
 // 入力が空なら、直近で選択した薬(最大10件)を新しい順に表示する。まだ履歴がなければ採用薬全件を五十音順で表示する。
 function renderSuggestions() {
   const qRaw = drugInput.value.trim();
@@ -271,7 +285,7 @@ function renderSuggestions() {
           return `<div class="suggest-item ${d.id === selectedDrugId ? 'active' : ''}" data-id="${d.id}">
             <div>
               <div class="suggest-name">${escapeHtml(d.name)}</div>
-              <div class="suggest-meta">${escapeHtml(d.category || '')} · <span class="mono">YJ ${escapeHtml(d.yj || '')}</span></div>
+              <div class="suggest-meta">${escapeHtml(d.category || '')}</div>
             </div>
             <span class="suggest-count">資料${cnt}件</span>
           </div>`;
@@ -282,7 +296,11 @@ function renderSuggestions() {
 
 suggestList.addEventListener('click', (e) => {
   const item = e.target.closest('.suggest-item');
-  if (item) selectDrug(item.dataset.id);
+  if (!item) return;
+  selectDrug(item.dataset.id);
+  drugInput.value = '';
+  closeSuggestDropdown();
+  drugInput.blur();
 });
 
 function selectDrug(id) {
@@ -411,7 +429,6 @@ function renderResources() {
           <div class="res-title">${escapeHtml(r.title)}</div>
           <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0;">
             <button class="fav-btn ${r.favorite ? 'is-fav' : ''}" data-action="favorite" data-id="${r.id}" title="お気に入り">${r.favorite ? '★' : '☆'}</button>
-            <span class="res-type-chip">${meta.label}</span>
             <span class="aud-chip" style="--aud-color:${aud.color};--aud-tint:${aud.tint}">${aud.label}</span>
             ${r.requiresLogin ? `<span class="aud-chip" style="--aud-color:#B05C5C;--aud-tint:#F6DEDE;" title="medパス・m3など会員ログインが必要な資材">🔒 要ログイン</span>` : ''}
           </div>

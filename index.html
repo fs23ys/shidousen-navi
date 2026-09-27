@@ -112,7 +112,7 @@
 
   <details class="manage-box" style="margin-bottom:18px;">
     <summary>採用医薬品リストの取込</summary>
-    <p class="hint">Excelファイル(.xlsx)をアップロードすると、薬剤名・YJコード・分類・メーカー名・資料URLなどの列を読み取って一括登録します。<strong>取り込むと採用医薬品リストと登録済み資料は最新の内容に完全に同期されます</strong>(ファイルにない薬剤や、薬剤は残るがファイルに記載のなくなった資料は削除されます。削除前に確認画面が出ます)。URLが一致する資料はタイトル・メモ・対象(患者/医療従事者/疾患)も最新の内容に自動更新されるため、以前の取込ミスで違う対象や自動生成タイトルのままになっているものも再取込するだけで直ります。アプリ内にアップロード済みのPDFファイルは対象外で削除されません。</p>
+    <p class="hint">Excel(.xlsx)を選ぶと、薬剤名・YJコード・分類・メーカー名・資料URLなどを読み取って一括登録します。<strong>採用医薬品リストと資料は、今のExcelの内容に完全に合わせて更新されます</strong>(ファイルにない薬・資料は削除されます。削除前に確認画面が出ます)。アップロード済みのPDFは削除されません。</p>
     <div class="dropzone">
       <strong>ファイルを選択してください</strong>
       クリックしてExcelファイルを選ぶと、列の対応を確認する画面が開きます
@@ -147,25 +147,18 @@
 <svg viewBox="0 0 40 24" class="floral floral-fixed" style="width:26px; height:16px; bottom:14px; left:64px; color:var(--sage); transform:rotate(14deg);"><use href="#fl-leaf"/></svg>
 
 <main class="layout">
-  <!-- 左カラム:検索 + 検索結果リスト(常時表示) + サイトでさがす -->
-  <aside class="left-col">
-    <div class="search-zone">
-      <span class="search-label">医薬品名で検索</span>
-      <div class="search-box">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-        <input id="drugInput" type="text" placeholder="採用薬から検索(例:アムロジピン、ロキソプロフェン…)" autocomplete="off">
-        <span class="search-count mono" id="drugTotalCount"></span>
-      </div>
+  <!-- 検索バー:フォーカス時に候補・履歴をドロップダウン表示する -->
+  <div class="search-zone">
+    <span class="search-label">医薬品名で検索</span>
+    <div class="search-box">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="drugInput" type="text" placeholder="採用薬から検索(例:アムロジピン、ロキソプロフェン…)" autocomplete="off">
+      <span class="search-count mono" id="drugTotalCount"></span>
     </div>
     <div class="suggest-panel" id="suggestList"></div>
+  </div>
 
-    <div class="panel-head" style="margin-top:22px;">
-      <div class="panel-title">サイトでさがす <span class="n" id="siteCount">0</span></div>
-    </div>
-    <div id="siteList"></div>
-  </aside>
-
-  <!-- 右カラム:選択中の医薬品 + 登録済み資料(メインエリア) -->
+  <!-- メインエリア:選択中の医薬品 + 登録済み資料 + サイトでさがす -->
   <section class="right-col">
     <div class="empty-hero" id="emptyHero">
       <svg viewBox="0 0 40 24" class="floral" style="width:30px; height:18px; top:-6px; left:24%; color:var(--sage); transform:rotate(-12deg);"><use href="#fl-leaf"/></svg>
@@ -173,7 +166,7 @@
       <svg viewBox="0 0 40 40" class="floral" style="width:24px; height:24px; top:14px; right:20%; color:var(--clay); transform:rotate(8deg);"><use href="#fl-flower2"/></svg>
       <div class="glyph">🔍</div>
       <h2>薬剤名を入力してください</h2>
-      <p>左のリストから薬剤を選択すると、登録済みの指導せんと、検索できるサイト一覧が表示されます。</p>
+      <p>上の検索欄をタップすると、直近で選んだ薬や検索候補が表示されます。薬剤を選択すると、登録済みの指導せんと、検索できるサイト一覧が表示されます。</p>
     </div>
 
     <div id="resultZone">
@@ -200,6 +193,11 @@
         <button id="favOnlyBtn" style="margin-left:auto;">☆ お気に入りのみ</button>
       </div>
       <div id="resList"></div>
+
+      <div class="panel-head" style="margin-top:28px;">
+        <div class="panel-title">サイトでさがす <span class="n" id="siteCount">0</span></div>
+      </div>
+      <div id="siteList"></div>
     </div>
   </section>
 </main>
