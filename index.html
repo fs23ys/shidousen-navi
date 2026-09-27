@@ -87,14 +87,16 @@
     <button class="hamburger-btn" id="menuBtn" aria-label="メニュー">☰</button>
     <div class="brand-mark display">指</div>
     <div>
-      <div class="brand-name">指導せんナビ</div>
+      <div class="brand-name">
+        指導せんナビ
+        <svg viewBox="0 0 40 40" class="brand-floral" aria-hidden="true"><use href="#fl-flower3"/></svg>
+      </div>
       <div class="brand-sub mono">Personal medication‑guide finder</div>
     </div>
   </div>
   <div class="header-right">
     <button class="lock-status" id="logoutBtn" title="ログアウト">🔒 ログイン中</button>
   </div>
-  <svg viewBox="0 0 40 40" class="floral" style="width:18px; height:18px; top:8px; right:96px; color:var(--pastel-yellow); transform:rotate(-10deg);"><use href="#fl-flower3"/></svg>
 </header>
 
 <div class="drawer-overlay" id="drawerOverlay"></div>
@@ -140,12 +142,6 @@
   </details>
 </aside>
 
-<!-- 画面の角に固定表示される、控えめな花のあしらい(狭い画面では非表示) -->
-<svg viewBox="0 0 40 62" class="floral floral-fixed" style="width:32px; height:50px; top:100px; right:26px; color:var(--amber); transform:rotate(6deg);"><use href="#fl-flower-stem"/></svg>
-<svg viewBox="0 0 16 24" class="floral floral-fixed" style="width:14px; height:21px; top:100px; right:76px; color:var(--clay); transform:rotate(-16deg);"><use href="#fl-bud"/></svg>
-<svg viewBox="0 0 40 62" class="floral floral-fixed" style="width:26px; height:40px; bottom:16px; left:20px; color:var(--pastel-yellow); transform:rotate(-4deg);"><use href="#fl-flower-stem"/></svg>
-<svg viewBox="0 0 40 24" class="floral floral-fixed" style="width:26px; height:16px; bottom:14px; left:64px; color:var(--sage); transform:rotate(14deg);"><use href="#fl-leaf"/></svg>
-
 <main class="layout">
   <!-- 左カラム:検索 + 検索結果リスト(常時表示) + サイトでさがす -->
   <aside class="left-col">
@@ -156,8 +152,8 @@
         <input id="drugInput" type="text" placeholder="採用薬から検索(例:アムロジピン、ロキソプロフェン…)" autocomplete="off">
         <span class="search-count mono" id="drugTotalCount"></span>
       </div>
+      <div class="suggest-panel" id="suggestList"></div>
     </div>
-    <div class="suggest-panel" id="suggestList"></div>
 
     <div class="panel-head" style="margin-top:22px;">
       <div class="panel-title">サイトでさがす <span class="n" id="siteCount">0</span></div>
@@ -168,9 +164,6 @@
   <!-- 右カラム:選択中の医薬品 + 登録済み資料(メインエリア) -->
   <section class="right-col">
     <div class="empty-hero" id="emptyHero">
-      <svg viewBox="0 0 40 24" class="floral" style="width:30px; height:18px; top:-6px; left:24%; color:var(--sage); transform:rotate(-12deg);"><use href="#fl-leaf"/></svg>
-      <svg viewBox="0 0 16 24" class="floral" style="width:20px; height:30px; bottom:10px; right:26%; color:var(--amber); transform:rotate(10deg);"><use href="#fl-bud"/></svg>
-      <svg viewBox="0 0 40 40" class="floral" style="width:24px; height:24px; top:14px; right:20%; color:var(--clay); transform:rotate(8deg);"><use href="#fl-flower2"/></svg>
       <div class="glyph">🔍</div>
       <h2>薬剤名を入力してください</h2>
       <p>左のリストから薬剤を選択すると、登録済みの指導せんと、検索できるサイト一覧が表示されます。</p>
@@ -178,12 +171,9 @@
 
     <div id="resultZone">
       <div class="selected-bar">
-        <div>
-          <div class="eyebrow">選択中の医薬品</div>
-          <h2 id="selDrugName">—</h2>
-          <div class="code mono" id="selDrugCode">—</div>
-          <div class="code-list mono" id="selDrugCodes"></div>
-        </div>
+        <div class="eyebrow">選択中の医薬品</div>
+        <h2 id="selDrugName">—</h2>
+        <div class="code-list mono" id="selDrugCodes"></div>
       </div>
 
       <div class="drug-note" id="drugNote" style="display:none;"></div>

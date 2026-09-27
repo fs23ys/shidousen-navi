@@ -121,7 +121,9 @@ main{max-width:1080px; margin:0 auto; padding:16px 28px 60px;}
 .right-col{min-width:0;}
 
 /* ---------- SEARCH ---------- */
-.search-zone{margin-bottom:8px;}
+/* 検索候補は検索欄フォーカス時だけ、検索欄のすぐ下にドロップダウンとして被さって表示する。
+   position:relativeにして、.suggest-panel(絶対配置)の基準点をこの検索欄自身にする。 */
+.search-zone{margin-bottom:8px; position:relative;}
 .search-label{
   font-size:12px; color:var(--ink-faint); font-weight:600;
   letter-spacing:.04em; margin-bottom:8px; display:block;
@@ -145,13 +147,18 @@ main{max-width:1080px; margin:0 auto; padding:16px 28px 60px;}
   font-size:11.5px; color:var(--ink-faint); padding:6px 12px;
   border-left:1px solid var(--line); white-space:nowrap;
 }
+/* .open が付くまでは非表示。ページ全体のレイアウト(左カラムの高さ)は動かさない */
 .suggest-panel{
+  display:none;
+  position:absolute; top:100%; left:0; right:0; margin-top:8px; z-index:30;
   background:var(--card); border:1.5px solid var(--line-strong);
-  border-radius:var(--radius-sm); box-shadow:var(--shadow-card);
-  max-height:min(50vh, 420px); overflow-y:auto;
+  border-radius:var(--radius-sm); box-shadow:var(--shadow-pop);
+  max-height:min(60vh, 480px); overflow-y:auto;
 }
+.suggest-panel.open{display:block;}
 .suggest-item{
-  padding:11px 18px; display:flex; justify-content:space-between; align-items:center;
+  /* タブレットの指操作でも誤タップしないよう、上下のタップ領域を広めに確保 */
+  padding:16px 18px; display:flex; justify-content:space-between; align-items:center;
   border-bottom:1px solid var(--line); gap:10px;
 }
 .suggest-item:last-child{border-bottom:none;}
@@ -180,17 +187,30 @@ main{max-width:1080px; margin:0 auto; padding:16px 28px 60px;}
 /* ---------- SELECTED DRUG ---------- */
 #resultZone{display:none; margin-top:30px;}
 #resultZone.open{display:block;}
+/* 見出しカード化:カウンターで一瞬でも今の薬が判別できるよう、淡いミント背景+太字大見出しにする */
 .selected-bar{
-  display:flex; align-items:baseline; justify-content:space-between; gap:12px;
-  margin-bottom:22px; flex-wrap:wrap;
-  padding-bottom:16px; border-bottom:2px dashed var(--line-strong);
+  margin-bottom:24px; padding:20px 26px;
+  border-radius:18px;
+  background:linear-gradient(135deg, var(--sage-tint) 0%, #EFFAF4 55%, var(--card) 100%);
+  border:1.5px solid var(--sage);
+  box-shadow:var(--shadow-card);
 }
-.selected-bar .eyebrow{font-size:11px; color:var(--ink-faint); font-weight:600; letter-spacing:.06em; margin-bottom:3px;}
-.selected-bar h2{font-family:'Zen Kaku Gothic New',sans-serif; font-size:22px; margin:0; font-weight:900;}
-.selected-bar .code{font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--ink-faint); margin-top:4px;}
-.code-list{display:flex; gap:14px; margin-top:6px; flex-wrap:wrap;}
-.code-list .code-item{font-size:11px; color:var(--ink-faint);}
-.code-list .code-item .k{color:var(--ink-soft); font-weight:600; margin-right:4px;}
+.selected-bar .eyebrow{
+  font-size:11px; color:var(--sage-deep); font-weight:700; letter-spacing:.08em;
+  margin-bottom:8px; text-transform:uppercase;
+}
+.selected-bar h2{
+  font-family:'Zen Kaku Gothic New',sans-serif; font-size:27px; margin:0 0 12px;
+  font-weight:900; line-height:1.35; color:var(--ink); word-break:break-word;
+}
+.code-list{display:flex; gap:8px; flex-wrap:wrap;}
+.code-list .code-badge{
+  display:inline-flex; align-items:center; gap:5px;
+  font-size:11.5px; font-weight:600; color:var(--ink-soft);
+  background:var(--card); border:1.5px solid var(--sage);
+  border-radius:99px; padding:5px 13px;
+}
+.code-list .code-badge .k{color:var(--sage-deep); font-weight:700;}
 
 .drug-note{
   background:var(--pastel-yellow-tint); border:1.5px solid var(--pastel-yellow);
@@ -404,9 +424,13 @@ main{max-width:1080px; margin:0 auto; padding:16px 28px 60px;}
 @keyframes spin{to{transform:rotate(360deg);}}
 
 /* ---------- FLORAL DECORATION ---------- */
+/* 画面全体に散らすのはやめ、ロゴのタイトル文字の横だけに1つ小さく添える */
+.brand-floral{
+  width:13px; height:13px; display:inline-block; vertical-align:middle;
+  margin-left:5px; margin-top:-3px; color:var(--pastel-yellow);
+  filter:drop-shadow(0 1px 1px rgba(60,40,90,0.06));
+}
 .floral{position:absolute; pointer-events:none; z-index:0; filter:drop-shadow(0 1px 1px rgba(60,40,90,0.06));}
-.floral-fixed{position:fixed;}
-@media (max-width:860px){ .floral-fixed{display:none;} }
 header{position:relative; overflow:hidden;}
 .empty-hero{position:relative;}
 #lockScreen .lock-card{position:relative; overflow:visible;}

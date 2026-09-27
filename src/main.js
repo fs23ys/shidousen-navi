@@ -210,8 +210,22 @@ function stopSubscriptions() {
 const drugInput = document.getElementById('drugInput');
 const suggestList = document.getElementById('suggestList');
 
-drugInput.addEventListener('input', renderSuggestions);
-drugInput.addEventListener('focus', renderSuggestions);
+// 検索候補は検索欄フォーカス時だけ、検索欄のすぐ下にドロップダウンとして表示する。
+function openSuggestDropdown() {
+  renderSuggestions();
+  suggestList.classList.add('open');
+}
+function closeSuggestDropdown() {
+  suggestList.classList.remove('open');
+}
+
+drugInput.addEventListener('input', openSuggestDropdown);
+drugInput.addEventListener('focus', openSuggestDropdown);
+
+// 検索欄・候補ドロップダウンの外側をクリック/タップしたら閉じる
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.search-zone') && !e.target.closest('#suggestList')) closeSuggestDropdown();
+});
 
 // キーボードショートカット:「/」でどこからでも検索欄にフォーカス、検索欄でEscを押すとクリア
 document.addEventListener('keydown', (e) => {
@@ -225,7 +239,7 @@ document.addEventListener('keydown', (e) => {
   }
   if (e.key === 'Escape' && document.activeElement === drugInput) {
     drugInput.value = '';
-    renderSuggestions();
+    closeSuggestDropdown();
     drugInput.blur();
   }
 });
@@ -238,7 +252,7 @@ function pushRecentDrug(id) {
   localStorage.setItem('shidousen.recentDrugIds', JSON.stringify(recentDrugIds));
 }
 
-// 検索結果リストは常時表示(左カラムに固定)。
+// 検索結果は検索欄フォーカス時のドロップダウンに表示する(openSuggestDropdown経由)。
 // 入力が空なら、直近で選択した薬(最大10件)を新しい順に表示する。まだ履歴がなければ採用薬全件を五十音順で表示する。
 function renderSuggestions() {
   const qRaw = drugInput.value.trim();
@@ -282,7 +296,11 @@ function renderSuggestions() {
 
 suggestList.addEventListener('click', (e) => {
   const item = e.target.closest('.suggest-item');
-  if (item) selectDrug(item.dataset.id);
+  if (!item) return;
+  selectDrug(item.dataset.id);
+  drugInput.value = '';
+  closeSuggestDropdown();
+  drugInput.blur();
 });
 
 function selectDrug(id) {
@@ -304,10 +322,10 @@ function renderSelection() {
   document.getElementById('emptyHero').style.display = 'none';
   document.getElementById('resultZone').classList.add('open');
   document.getElementById('selDrugName').textContent = d.name;
-  document.getElementById('selDrugCode').textContent = d.category || '';
   document.getElementById('selDrugCodes').innerHTML = `
-    <span class="code-item"><span class="k">YJ</span>${escapeHtml(d.yj || '')}</span>
-    ${d.maker ? `<span class="code-item"><span class="k">メーカー</span>${escapeHtml(d.maker)}</span>` : ''}
+    ${d.category ? `<span class="code-badge"><span class="k">分類</span>${escapeHtml(d.category)}</span>` : ''}
+    <span class="code-badge"><span class="k">YJ</span>${escapeHtml(d.yj || '')}</span>
+    ${d.maker ? `<span class="code-badge"><span class="k">メーカー</span>${escapeHtml(d.maker)}</span>` : ''}
   `;
   const drugNoteEl = document.getElementById('drugNote');
   if (d.note && d.note.trim()) {
