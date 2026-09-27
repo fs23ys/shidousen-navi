@@ -322,10 +322,11 @@ function renderSuggestions() {
     suggestList.innerHTML = `<div class="suggest-empty">一致する採用薬が見つかりません</div>`;
   } else {
     const label = sectionLabel ? `<div class="suggest-section-label">${escapeHtml(sectionLabel)}</div>` : '';
+    // ドロップダウンはスクロール可能なので、件数で打ち切らず該当する薬を全件表示する
+    // (行ボタンでの絞り込みなどで50件を超えても、後半が欠けないようにするため)。
     suggestList.innerHTML =
       label +
       matches
-        .slice(0, 50)
         .map((d) => {
           const cnt = resources.filter((r) => r.drugId === d.id).length;
           return `<div class="suggest-item ${d.id === selectedDrugId ? 'active' : ''}" data-id="${d.id}">
