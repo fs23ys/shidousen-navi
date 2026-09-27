@@ -322,10 +322,10 @@ function renderSelection() {
   document.getElementById('emptyHero').style.display = 'none';
   document.getElementById('resultZone').classList.add('open');
   document.getElementById('selDrugName').textContent = d.name;
+  document.getElementById('selDrugCode').textContent = d.category || '';
   document.getElementById('selDrugCodes').innerHTML = `
-    ${d.category ? `<span class="code-badge"><span class="k">分類</span>${escapeHtml(d.category)}</span>` : ''}
-    <span class="code-badge"><span class="k">YJ</span>${escapeHtml(d.yj || '')}</span>
-    ${d.maker ? `<span class="code-badge"><span class="k">メーカー</span>${escapeHtml(d.maker)}</span>` : ''}
+    <span class="code-item"><span class="k">YJ</span>${escapeHtml(d.yj || '')}</span>
+    ${d.maker ? `<span class="code-item"><span class="k">メーカー</span>${escapeHtml(d.maker)}</span>` : ''}
   `;
   const drugNoteEl = document.getElementById('drugNote');
   if (d.note && d.note.trim()) {
