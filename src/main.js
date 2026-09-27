@@ -239,12 +239,51 @@ document.addEventListener('keydown', (e) => {
   }
   if (e.key === 'Escape' && document.activeElement === drugInput) {
     drugInput.value = '';
+    clearKanaRowFilter();
     closeSuggestDropdown();
     drugInput.blur();
   }
 });
 
 const jaCollator = new Intl.Collator('ja');
+
+// あ行〜わ行の丸ボタンによる絞り込み。濁音・半濁音・小書き文字も対応する行にまとめる。
+// どの行にも属さない先頭文字(ローマ字・数字始まりの薬名など)は「他」に入れる。
+const KANA_ROWS = {
+  あ: 'あいうえおぁぃぅぇぉ',
+  か: 'かきくけこがぎぐげご',
+  さ: 'さしすせそざじずぜぞ',
+  た: 'たちつてとだぢづでどっ',
+  な: 'なにぬねの',
+  は: 'はひふへほばびぶべぼぱぴぷぺぽ',
+  ま: 'まみむめも',
+  や: 'やゆよゃゅょ',
+  ら: 'らりるれろ',
+  わ: 'わゐゑをんゎ',
+};
+const KANA_ROW_LOOKUP = new Map();
+Object.entries(KANA_ROWS).forEach(([row, chars]) => {
+  for (const ch of chars) KANA_ROW_LOOKUP.set(ch, row);
+});
+// 薬名の先頭文字がどの行に属するか(toSearchKeyでカタカナ→ひらがな変換した前提)。属する行がなければ「他」。
+function kanaRowOfName(name) {
+  return KANA_ROW_LOOKUP.get(toSearchKey(name).charAt(0)) || '他';
+}
+
+let activeKanaRow = null;
+const kanaRowFilterEl = document.getElementById('kanaRowFilter');
+function clearKanaRowFilter() {
+  activeKanaRow = null;
+  kanaRowFilterEl.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+}
+kanaRowFilterEl.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-row]');
+  if (!btn) return;
+  activeKanaRow = activeKanaRow === btn.dataset.row ? null : btn.dataset.row;
+  kanaRowFilterEl.querySelectorAll('button').forEach((b) => b.classList.toggle('active', b.dataset.row === activeKanaRow));
+  drugInput.focus();
+  openSuggestDropdown();
+});
 
 let recentDrugIds = JSON.parse(localStorage.getItem('shidousen.recentDrugIds') || '[]');
 function pushRecentDrug(id) {
@@ -254,22 +293,29 @@ function pushRecentDrug(id) {
 
 // 検索結果は検索欄フォーカス時のドロップダウンに表示する(openSuggestDropdown経由)。
 // 入力が空なら、直近で選択した薬(最大10件)を新しい順に表示する。まだ履歴がなければ採用薬全件を五十音順で表示する。
+// あ〜わ行/他ボタンで行を選んでいる場合は、テキスト検索・履歴表示のどちらにもAND条件でかける。
 function renderSuggestions() {
   const qRaw = drugInput.value.trim();
   const q = toSearchKey(qRaw);
+  const matchesRow = (d) => !activeKanaRow || kanaRowOfName(d.name) === activeKanaRow;
   let matches;
   let sectionLabel = '';
   if (q === '') {
-    const recent = recentDrugIds.map((id) => drugs.find((d) => d.id === id)).filter(Boolean).slice(0, 10);
-    if (recent.length > 0) {
-      matches = recent;
-      sectionLabel = '最近選択した薬';
+    if (activeKanaRow) {
+      matches = drugs.filter(matchesRow).sort((a, b) => jaCollator.compare(a.name, b.name));
+      sectionLabel = activeKanaRow === '他' ? '他' : `${activeKanaRow}行`;
     } else {
-      matches = drugs.slice().sort((a, b) => jaCollator.compare(a.name, b.name));
+      const recent = recentDrugIds.map((id) => drugs.find((d) => d.id === id)).filter(Boolean).slice(0, 10);
+      if (recent.length > 0) {
+        matches = recent;
+        sectionLabel = '最近選択した薬';
+      } else {
+        matches = drugs.slice().sort((a, b) => jaCollator.compare(a.name, b.name));
+      }
     }
   } else {
     matches = drugs
-      .filter((d) => toSearchKey(d.name).includes(q) || toSearchKey(d.category).includes(q))
+      .filter((d) => (toSearchKey(d.name).includes(q) || toSearchKey(d.category).includes(q)) && matchesRow(d))
       .sort((a, b) => jaCollator.compare(a.name, b.name));
   }
   if (matches.length === 0) {
@@ -299,6 +345,7 @@ suggestList.addEventListener('click', (e) => {
   if (!item) return;
   selectDrug(item.dataset.id);
   drugInput.value = '';
+  clearKanaRowFilter();
   closeSuggestDropdown();
   drugInput.blur();
 });

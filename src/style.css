@@ -147,6 +147,18 @@ main{max-width:1080px; margin:0 auto; padding:16px 28px 60px;}
   font-size:11.5px; color:var(--ink-faint); padding:6px 12px;
   border-left:1px solid var(--line); white-space:nowrap;
 }
+/* あ行〜わ行(+他)の丸ボタンで絞り込み。押した行がアクティブ表示になる */
+.kana-row-filter{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px;}
+.kana-row-filter button{
+  width:30px; height:30px; flex-shrink:0;
+  border-radius:50%; border:1.5px solid var(--line-strong);
+  background:var(--card); color:var(--ink-soft);
+  font-family:'Zen Kaku Gothic New',sans-serif; font-size:13px; font-weight:700;
+  display:flex; align-items:center; justify-content:center;
+  transition:background .15s, border-color .15s, color .15s;
+}
+.kana-row-filter button:hover{border-color:var(--sage); color:var(--sage-deep);}
+.kana-row-filter button.active{background:var(--sage); border-color:var(--sage); color:#fff;}
 /* .open が付くまでは非表示。ページ全体のレイアウト(左カラムの高さ)は動かさない */
 .suggest-panel{
   display:none;
