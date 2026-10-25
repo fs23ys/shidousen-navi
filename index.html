@@ -248,6 +248,20 @@
           <input type="file" id="fFile" accept="application/pdf">
           <div id="fFileCurrent" style="font-size:11.5px;color:var(--ink-faint);margin-top:6px;"></div>
         </div>
+        <div class="field">
+          <label>用紙サイズ<span style="font-weight:400;color:var(--ink-faint);"> (任意・印刷時の目安)</span></label>
+          <input id="fPaperSize" placeholder="例:A4" list="paperSizeOptions">
+          <datalist id="paperSizeOptions">
+            <option value="A4">
+            <option value="A5">
+            <option value="B5">
+            <option value="A3">
+            <option value="B6">
+            <option value="A6">
+            <option value="A4（見開き）">
+            <option value="その他">
+          </datalist>
+        </div>
       </div>
 
       <div id="typeFields-paper" style="display:none">

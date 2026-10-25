@@ -478,6 +478,7 @@ function renderResources() {
           <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0;">
             <button class="fav-btn ${r.favorite ? 'is-fav' : ''}" data-action="favorite" data-id="${r.id}" title="お気に入り">${r.favorite ? '★' : '☆'}</button>
             <span class="aud-chip" style="--aud-color:${aud.color};--aud-tint:${aud.tint}">${aud.label}</span>
+            ${r.paperSize ? `<span class="aud-chip" style="--aud-color:var(--ink-soft);--aud-tint:var(--paper-deep);" title="用紙サイズ">📄${escapeHtml(r.paperSize)}</span>` : ''}
             ${r.requiresLogin ? `<span class="aud-chip" style="--aud-color:#B05C5C;--aud-tint:#F6DEDE;" title="medパス・m3など会員ログインが必要な資材">🔒 要ログイン</span>` : ''}
           </div>
         </div>
@@ -635,6 +636,7 @@ const fTitle = document.getElementById('fTitle');
 const fPaperFrom = document.getElementById('fPaperFrom');
 const fPaperContact = document.getElementById('fPaperContact');
 const fMemo = document.getElementById('fMemo');
+const fPaperSize = document.getElementById('fPaperSize');
 
 document.getElementById('openAddModalBtn').addEventListener('click', openAddModal);
 document.getElementById('cancelModalBtn').addEventListener('click', closeAddModal);
@@ -657,7 +659,7 @@ function openAddModal() {
   addModal.classList.add('open');
   setType(currentType); // 前回選んだ種類を維持
   setAudience(currentAudience); // 前回選んだ対象を維持
-  [fTitle, fUrl, fPaperFrom, fPaperContact, fMemo].forEach((el) => (el.value = ''));
+  [fTitle, fUrl, fPaperFrom, fPaperContact, fMemo, fPaperSize].forEach((el) => (el.value = ''));
   fRequiresLogin.checked = false;
   fFile.value = '';
   fFileCurrent.textContent = '';
@@ -681,6 +683,7 @@ function openEditModal(resourceId) {
   fPaperFrom.value = r.paperFrom || '';
   fPaperContact.value = r.paperContact || '';
   fMemo.value = r.memo || '';
+  fPaperSize.value = r.paperSize || '';
   fFile.value = '';
   fFileCurrent.textContent = r.storagePath ? '📎 現在アップロード済みのPDFがあります。新しいファイルを選ぶと置き換わります。' : '';
   setTimeout(() => fTitle.focus(), 50);
@@ -761,6 +764,7 @@ async function saveResource() {
     if (currentType === 'web') {
       fields.url = url;
       fields.requiresLogin = fRequiresLogin.checked || undefined;
+      fields.paperSize = fPaperSize.value.trim() || undefined;
       fields.paperFrom = undefined;
       fields.paperContact = undefined;
       if (storagePath) {
@@ -780,6 +784,7 @@ async function saveResource() {
       fields.url = undefined;
       fields.sourceUrl = undefined;
       fields.requiresLogin = undefined;
+      fields.paperSize = undefined;
       if (editingBefore?.storagePath) {
         fields.storagePath = undefined;
         await deleteResourceFile(editingBefore.storagePath);
