@@ -270,6 +270,12 @@ main{max-width:1080px; margin:0 auto; padding:16px 28px 60px;}
 .res-actions a:hover, .res-actions button:hover{border-color:var(--sage); color:var(--sage-deep);}
 .res-del{margin-left:auto; color:var(--ink-faint); border-color:transparent; background:none;}
 .res-del:hover{color:var(--danger); border-color:transparent;}
+.btn-danger-outline{
+  flex-shrink:0; background:none; border:1.5px solid var(--danger); color:var(--danger);
+  padding:7px 14px; border-radius:99px; font-size:12px; font-weight:600;
+}
+.btn-danger-outline:hover{background:var(--danger); color:#fff;}
+.btn-danger-outline:disabled{opacity:.6; cursor:default;}
 .aud-chip{
   font-size:10px; font-weight:700; padding:3px 8px; border-radius:5px;
   color:var(--aud-color); background:var(--aud-tint); white-space:nowrap;

@@ -173,15 +173,18 @@ function startSubscriptions() {
   unsubscribers.push(
     subscribeDrugs((list) => {
       drugs = list;
-      document.getElementById('drugTotalCount').textContent = drugs.length + '件';
-      document.getElementById('drugManageCount').textContent = ' ' + drugs.length;
+      const activeCount = drugs.filter((d) => !d.archived).length;
+      document.getElementById('drugTotalCount').textContent = activeCount + '件';
+      document.getElementById('drugManageCount').textContent = ' ' + activeCount;
       renderSuggestions();
+      renderArchivedDrugs();
       if (selectedDrugId) renderSelection();
     }),
     subscribeResources((list) => {
       resources = list;
       if (selectedDrugId) renderResources();
       renderSuggestions();
+      renderArchivedDrugs();
     }),
     subscribeSites((list) => {
       sites = list;
@@ -298,23 +301,25 @@ function renderSuggestions() {
   const qRaw = drugInput.value.trim();
   const q = toSearchKey(qRaw);
   const matchesRow = (d) => !activeKanaRow || kanaRowOfName(d.name) === activeKanaRow;
+  // アーカイブ済み(販売中止・取扱終了等で採用医薬品リストから外れた)薬は、通常の検索・履歴には出さない。
+  const browsableDrugs = drugs.filter((d) => !d.archived);
   let matches;
   let sectionLabel = '';
   if (q === '') {
     if (activeKanaRow) {
-      matches = drugs.filter(matchesRow).sort((a, b) => jaCollator.compare(a.name, b.name));
+      matches = browsableDrugs.filter(matchesRow).sort((a, b) => jaCollator.compare(a.name, b.name));
       sectionLabel = activeKanaRow === '他' ? '他' : `${activeKanaRow}行`;
     } else {
-      const recent = recentDrugIds.map((id) => drugs.find((d) => d.id === id)).filter(Boolean).slice(0, 10);
+      const recent = recentDrugIds.map((id) => browsableDrugs.find((d) => d.id === id)).filter(Boolean).slice(0, 10);
       if (recent.length > 0) {
         matches = recent;
         sectionLabel = '最近選択した薬';
       } else {
-        matches = drugs.slice().sort((a, b) => jaCollator.compare(a.name, b.name));
+        matches = browsableDrugs.slice().sort((a, b) => jaCollator.compare(a.name, b.name));
       }
     }
   } else {
-    matches = drugs
+    matches = browsableDrugs
       .filter((d) => (toSearchKey(d.name).includes(q) || toSearchKey(d.category).includes(q)) && matchesRow(d))
       .sort((a, b) => jaCollator.compare(a.name, b.name));
   }
@@ -370,6 +375,7 @@ function renderSelection() {
   document.getElementById('emptyHero').style.display = 'none';
   document.getElementById('resultZone').classList.add('open');
   document.getElementById('selDrugName').textContent = d.name;
+  document.getElementById('selDrugArchivedBadge').style.display = d.archived ? 'inline-block' : 'none';
   document.getElementById('selDrugCode').textContent = d.category || '';
   document.getElementById('selDrugCodes').innerHTML = `
     <span class="code-item"><span class="k">YJ</span>${escapeHtml(d.yj || '')}</span>
@@ -971,14 +977,16 @@ function planExcelSync() {
   const { drugs: incomingDrugs, resources: incomingResources } = buildImportPlan(excelState.rows, excelState.mapping);
 
   // 採用医薬品リストは「完全同期」:最新の取込内容に薬剤一覧を合わせる。
-  // 取込内容にない既存の薬は削除し、その薬に紐づく登録済み資料も一緒に削除する。
+  // ただし取込内容にない既存の薬は削除せず「アーカイブ」として一覧から隠すだけにする
+  // (資料・アップロード済みPDFはそのまま残し、完全な削除は利用者が手動で行う。詳細はplanDrugSyncを参照)。
   const drugPlan = planDrugSync(drugs, incomingDrugs);
-  const deleteDrugIds = new Set(drugPlan.toDelete.map((d) => d.id));
+  const archiveDrugIds = new Set(drugPlan.toArchive.map((d) => d.id));
 
-  // 資料側も完全同期する準備:薬が残る場合でも、その薬についてExcelに書かれていない資料
-  // (以前の取込バグなどで別の薬に紛れ込んだものを含む)は削除候補として数える。
+  // 資料側も完全同期する準備:薬が引き続きアクティブな場合でも、その薬についてExcelに
+  // 書かれていない資料(以前の取込バグなどで別の薬に紛れ込んだものを含む)は削除候補として数える。
+  // アーカイブされる薬・既にアーカイブ済みの薬の資料は対象外(何も変更しない)。
   // ただしアプリ内にアップロードしたPDF(storagePathあり)はExcelから来たものではないため対象外。
-  const keptExistingDrugIds = new Set(drugs.filter((d) => !deleteDrugIds.has(d.id)).map((d) => d.id));
+  const keptExistingDrugIds = new Set(drugs.filter((d) => !archiveDrugIds.has(d.id) && !d.archived).map((d) => d.id));
   const drugIdMapPreview = drugPlan.resolveIds([]);
 
   // Web資料は種類+URLで一致判定(従来通り)。紙資材はURLが重複しうるため、
@@ -1012,33 +1020,85 @@ function planExcelSync() {
       ? !matchedPaperIds.has(r.id)
       : !(expectedWebByDrug.get(r.drugId) || new Set()).has(resourceMatchKey(r));
   });
-  const deletedDrugsResources = resources.filter((r) => deleteDrugIds.has(r.drugId));
-
-  return { incomingDrugs, incomingResources, drugPlan, keptExistingDrugIds, resourcesToPrune, deletedDrugsResources };
+  return { incomingDrugs, incomingResources, drugPlan, keptExistingDrugIds, resourcesToPrune };
 }
+
+/* ---------------- アーカイブ済みの薬(販売中止等で採用医薬品リストから外れた薬)の管理 ---------------- */
+// Excel再取込で一覧になくなった薬は削除せずarchived:trueにするだけなので、ここで一覧表示し、
+// 本当に今後使わないと分かったものだけ、資料・アップロード済みPDFも含めて手動で完全に削除できるようにする。
+const archivedDrugsListEl = document.getElementById('archivedDrugsList');
+
+function renderArchivedDrugs() {
+  const archived = drugs.filter((d) => d.archived);
+  document.getElementById('archivedDrugCount').textContent = archived.length;
+  if (archived.length === 0) {
+    archivedDrugsListEl.innerHTML = `<div class="empty-panel">アーカイブされている薬はありません。</div>`;
+    return;
+  }
+  archivedDrugsListEl.innerHTML = archived
+    .slice()
+    .sort((a, b) => (b.archivedAt || '').localeCompare(a.archivedAt || ''))
+    .map((d) => {
+      const cnt = resources.filter((r) => r.drugId === d.id).length;
+      const dateLabel = d.archivedAt ? new Date(d.archivedAt).toLocaleDateString('ja-JP') : '';
+      return `<div class="site-card">
+        <div class="site-info">
+          <div class="site-name">${escapeHtml(d.name)}</div>
+          <div class="hint" style="margin:2px 0 0;">${escapeHtml(d.maker || '')}${d.maker ? ' ・' : ''}資料${cnt}件${dateLabel ? ' ・' + dateLabel + 'にアーカイブ' : ''}</div>
+        </div>
+        <button class="btn-danger-outline" data-action="hard-delete-drug" data-id="${d.id}">完全に削除</button>
+      </div>`;
+    })
+    .join('');
+}
+
+archivedDrugsListEl.addEventListener('click', async (e) => {
+  const btn = e.target.closest('button[data-action="hard-delete-drug"]');
+  if (!btn) return;
+  const d = drugs.find((x) => x.id === btn.dataset.id);
+  if (!d) return;
+  const relatedResources = resources.filter((r) => r.drugId === d.id);
+  const confirmMsg =
+    `「${d.name}」と、紐づく資料${relatedResources.length}件(アップロード済みPDFも含む)を完全に削除します。\n` +
+    `元に戻せません。本当によろしいですか?`;
+  if (!window.confirm(confirmMsg)) return;
+  btn.disabled = true;
+  btn.textContent = '削除中…';
+  try {
+    await Promise.all(relatedResources.filter((r) => r.storagePath).map((r) => deleteResourceFile(r.storagePath)));
+    if (relatedResources.length > 0) await deleteResourcesBatch(relatedResources.map((r) => r.id));
+    await deleteDrugsBatch([d.id]);
+    showToast('完全に削除しました');
+  } catch (err) {
+    console.error('完全削除エラー:', err);
+    showToast('削除に失敗しました。通信状況をご確認ください');
+    btn.disabled = false;
+    btn.textContent = '完全に削除';
+  }
+});
 
 document.getElementById('excelExportDeletedBtn').addEventListener('click', () => {
   if (!excelState || !excelState.mapping.includes('name')) {
     showToast('薬剤名の列を選んでください');
     return;
   }
-  const { drugPlan, resourcesToPrune, deletedDrugsResources } = planExcelSync();
-  if (drugPlan.toDelete.length === 0 && resourcesToPrune.length === 0) {
-    showToast('今回削除される薬・資料はありません');
+  const { drugPlan, resourcesToPrune } = planExcelSync();
+  if (drugPlan.toArchive.length === 0 && resourcesToPrune.length === 0) {
+    showToast('今回アーカイブされる薬・削除される資料はありません');
     return;
   }
   downloadJson(
     {
       exportedAt: new Date().toISOString(),
-      note: 'この内容で取り込んだ場合に削除される予定のデータ(実行前のプレビュー)',
-      deletedDrugs: drugPlan.toDelete,
-      deletedDrugsResources,
+      note:
+        'この内容で取り込んだ場合の予定(実行前のプレビュー)。archivedDrugsは削除ではなくアーカイブ(一覧から非表示)されるだけで、資料・PDFは残ります。prunedResourcesは実際に削除されます(アップロード済みPDFは対象外)。',
+      archivedDrugs: drugPlan.toArchive,
       prunedResources: resourcesToPrune,
     },
-    'shidousen-navi-to-be-deleted',
+    'shidousen-navi-to-be-archived',
   );
   showToast(
-    `削除予定データを書き出しました(薬${drugPlan.toDelete.length}件・資料${deletedDrugsResources.length + resourcesToPrune.length}件)`,
+    `プレビューを書き出しました(アーカイブされる薬${drugPlan.toArchive.length}件・削除される資料${resourcesToPrune.length}件)`,
   );
 });
 
@@ -1047,11 +1107,14 @@ document.getElementById('excelImportBtn').addEventListener('click', async () => 
     showToast('薬剤名の列を選んでください');
     return;
   }
-  const { incomingResources, drugPlan, resourcesToPrune, deletedDrugsResources } = planExcelSync();
+  const { incomingResources, drugPlan, resourcesToPrune } = planExcelSync();
 
   const confirmMsg =
-    `薬剤: 追加${drugPlan.toAdd.length}件・更新${drugPlan.toUpdate.length}件・削除${drugPlan.toDelete.length}件\n` +
-    (drugPlan.toDelete.length > 0 ? `(削除される薬剤に紐づく資料も${deletedDrugsResources.length}件削除されます)\n` : '') +
+    `薬剤: 追加${drugPlan.toAdd.length}件・更新${drugPlan.toUpdate.length}件・アーカイブ${drugPlan.toArchive.length}件\n` +
+    (drugPlan.toArchive.length > 0
+      ? `(アーカイブは削除ではありません。一覧から隠れるだけで、資料・アップロード済みPDFはそのまま残ります。\n` +
+        ` 再度Excelに載れば自動で元に戻ります。完全に削除したい場合は、メニューの「アーカイブ済みの薬」から手動で行ってください)\n`
+      : '') +
     (resourcesToPrune.length > 0
       ? `資料: 今のExcelに記載がなくなった資料を${resourcesToPrune.length}件削除します(アップロード済みPDFは対象外)\n`
       : '') +
@@ -1066,13 +1129,13 @@ document.getElementById('excelImportBtn').addEventListener('click', async () => 
     if (drugPlan.toUpdate.length > 0) await updateDrugsBatch(drugPlan.toUpdate);
     const drugIdMap = drugPlan.resolveIds(newDrugIds);
 
-    // 削除される薬に紐づく資料と、アップロード済みPDFファイルを削除する
-    const deleteDrugIds = drugPlan.toDelete.map((d) => d.id);
-    if (deleteDrugIds.length > 0) {
-      await Promise.all(deletedDrugsResources.filter((r) => r.storagePath).map((r) => deleteResourceFile(r.storagePath)));
-      if (deletedDrugsResources.length > 0) await deleteResourcesBatch(deletedDrugsResources.map((r) => r.id));
-      await deleteDrugsBatch(deleteDrugIds);
-      if (deleteDrugIds.includes(selectedDrugId)) {
+    // 今回のExcelに出てこなかった薬は、削除せず「アーカイブ」として一覧から隠すだけにする。
+    // 資料・アップロード済みPDFはそのまま残し、完全な削除は利用者が「アーカイブ済みの薬」から手動で行う。
+    if (drugPlan.toArchive.length > 0) {
+      const archivedAt = new Date().toISOString();
+      await updateDrugsBatch(drugPlan.toArchive.map((d) => ({ id: d.id, fields: { archived: true, archivedAt } })));
+      const archiveDrugIds = drugPlan.toArchive.map((d) => d.id);
+      if (archiveDrugIds.includes(selectedDrugId)) {
         selectedDrugId = null;
         document.getElementById('resultZone').classList.remove('open');
         document.getElementById('emptyHero').style.display = 'block';
@@ -1158,7 +1221,7 @@ document.getElementById('excelImportBtn').addEventListener('click', async () => 
 
     excelModal.classList.remove('open');
     showToast(
-      `採用医薬品リストを更新しました:追加${drugPlan.toAdd.length}件・更新${drugPlan.toUpdate.length}件・削除${drugPlan.toDelete.length}件、資料+${resourcesToAdd.length}件・更新${resourcesToUpdate.length}件・削除${resourcesToPrune.length}件`,
+      `採用医薬品リストを更新しました:追加${drugPlan.toAdd.length}件・更新${drugPlan.toUpdate.length}件・アーカイブ${drugPlan.toArchive.length}件、資料+${resourcesToAdd.length}件・更新${resourcesToUpdate.length}件・削除${resourcesToPrune.length}件`,
     );
     excelState = null;
   } catch (err) {

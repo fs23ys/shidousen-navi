@@ -114,7 +114,7 @@
 
   <details class="manage-box" style="margin-bottom:18px;">
     <summary>採用医薬品リストの取込</summary>
-    <p class="hint">Excel(.xlsx)を選ぶと、薬剤名・YJコード・分類・メーカー名・資料URLなどを読み取って一括登録します。<strong>採用医薬品リストと資料は、今のExcelの内容に完全に合わせて更新されます</strong>(ファイルにない薬・資料は削除されます。削除前に確認画面が出ます)。アップロード済みのPDFは削除されません。</p>
+    <p class="hint">Excel(.xlsx)を選ぶと、薬剤名・YJコード・分類・メーカー名・資料URLなどを読み取って一括登録します。<strong>採用医薬品リストは今のExcelの内容に合わせて更新されます</strong>が、ファイルにない薬は削除せず「アーカイブ」として一覧から隠すだけにします(資料・アップロード済みPDFもそのまま残ります)。再度Excelに載れば自動で元に戻り、完全に削除したい場合はメニューの「アーカイブ済みの薬」から手動で行えます。なお、薬自体は残るのに一部の資料だけがファイルからなくなった場合、その資料は削除されます(アップロード済みPDFは対象外)。</p>
     <div class="dropzone">
       <strong>ファイルを選択してください</strong>
       クリックしてExcelファイルを選ぶと、列の対応を確認する画面が開きます
@@ -126,6 +126,12 @@
       </div>
     </div>
     <p class="hint" style="margin-top:12px;">現在の登録件数:<span class="mono" id="drugManageCount"></span>件</p>
+  </details>
+
+  <details class="manage-box" style="margin-bottom:18px;">
+    <summary>アーカイブ済みの薬<span class="req-badge" id="archivedDrugCount" style="margin-left:6px;">0</span></summary>
+    <p class="hint">Excel再取込で一覧になくなった薬はここに入ります。削除ではないので、資料・アップロード済みPDFはそのまま残っており、検索などの通常画面には出てきません。再度Excelに載れば自動で元に戻ります。<strong>販売中止などで今後絶対に採用しないと分かっている薬だけ</strong>、完全に削除してください(資料・PDFも含めて元に戻せません)。</p>
+    <div id="archivedDrugsList"></div>
   </details>
 
   <details class="manage-box">
@@ -187,6 +193,7 @@
         <div>
           <div class="eyebrow">選択中の医薬品</div>
           <h2 id="selDrugName">—</h2>
+          <span id="selDrugArchivedBadge" class="aud-chip" style="display:none;--aud-color:#B05C5C;--aud-tint:#F6DEDE;">🗄️ アーカイブ済み(取扱終了・採用医薬品リストには出てきません)</span>
           <div class="code mono" id="selDrugCode">—</div>
           <div class="code-list mono" id="selDrugCodes"></div>
         </div>
@@ -302,7 +309,7 @@
       </table>
       <div class="map-preview" id="excelPreview"></div>
       <div class="modal-actions" style="justify-content:space-between;">
-        <button class="btn-cancel" id="excelExportDeletedBtn" style="flex:none;" title="この内容で取り込んだ場合に削除される薬・資料だけをJSONで書き出します(取込は実行しません)">🗑 削除予定のデータだけ書き出す</button>
+        <button class="btn-cancel" id="excelExportDeletedBtn" style="flex:none;" title="この内容で取り込んだ場合にアーカイブされる薬・削除される資料だけをJSONで書き出します(取込は実行しません)">🗑 アーカイブ/削除予定のデータだけ書き出す</button>
         <div style="display:flex; gap:10px; flex:none;">
           <button class="btn-cancel" id="excelCancelBtn">キャンセル</button>
           <button class="btn-save" id="excelImportBtn">この内容で取り込む</button>

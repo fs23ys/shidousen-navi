@@ -68,7 +68,10 @@ export function planDrugMerge(existingDrugs, incomingDrugs) {
 // 採用医薬品リストの完全同期(Excel再取込用)。
 // マージ(追加のみ)とは異なり、最新の取込内容に薬剤一覧を合わせる:
 // 新規は追加、既存と一致するもの(YJコード優先、なければ薬剤名)は内容を最新の値に更新、
-// 取込内容に存在しない既存の薬は削除対象として返す(実際の削除は呼び出し側が確認の上で行う)。
+// 取込内容に存在しない既存の薬は「アーカイブ」対象として返す(実際に削除はせず、一覧から
+// 隠すだけにする。資料・アップロード済みPDFも保持したままにし、完全な削除は別途、利用者が
+// アーカイブ一覧から手動で行う)。既にアーカイブ済みの薬は、今回も一致しなければそのまま
+// 変更なし(再度アーカイブ対象として扱い直さない)。一致した場合は自動的にアーカイブを解除する。
 export function planDrugSync(existingDrugs, incomingDrugs) {
   const toAdd = [];
   const toUpdate = []; // { id, fields }
@@ -97,6 +100,12 @@ export function planDrugSync(existingDrugs, incomingDrugs) {
       if (!updatedExistingIds.has(existing.id)) {
         updatedExistingIds.add(existing.id);
         const { id, ...fields } = d;
+        // 以前アーカイブ済み(店舗在庫なし等で前回の取込で一覧から隠されていた)薬が
+        // 今回のExcelに再び現れた場合は、再採用とみなしてアーカイブを解除する。
+        // 注意: 薬の更新にはupdateDrugsBatch(merge:true のset+stripUndefined)を使っており、
+        // undefinedを指定してもFirestore上の既存フィールドは消えない(deleteField()とは違う)。
+        // そのため「解除」は値をfalseにして明示的に上書きする必要がある。
+        fields.archived = false;
         toUpdate.push({ id: existing.id, fields });
       }
       return;
@@ -125,12 +134,14 @@ export function planDrugSync(existingDrugs, incomingDrugs) {
     if (d.name) nameToAddIndex.set(d.name, idx);
   });
 
-  const toDelete = existingDrugs.filter((x) => !matchedExistingIds.has(x.id));
+  // 一致しなかった既存の薬のうち、まだアーカイブされていないものだけを今回新たに
+  // アーカイブする(既にアーカイブ済みの薬は、変更せずそのままにしておく)。
+  const toArchive = existingDrugs.filter((x) => !matchedExistingIds.has(x.id) && !x.archived);
 
   return {
     toAdd,
     toUpdate,
-    toDelete,
+    toArchive,
     resolveIds(newIds) {
       const map = new Map(resolvedByImportedId);
       addIndexByImportedId.forEach((idx, importedId) => {
