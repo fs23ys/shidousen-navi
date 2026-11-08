@@ -1052,29 +1052,52 @@ function renderArchivedDrugs() {
     .join('');
 }
 
-archivedDrugsListEl.addEventListener('click', async (e) => {
-  const btn = e.target.closest('button[data-action="hard-delete-drug"]');
-  if (!btn) return;
-  const d = drugs.find((x) => x.id === btn.dataset.id);
-  if (!d) return;
+// 薬1件を、紐づく資料・アップロード済みPDFも含めて完全に削除する(アーカイブ済みかどうかを問わない)。
+// 「アーカイブ済みの薬」一覧の削除ボタンと、選択中の医薬品画面の削除ボタンの両方から呼ばれる共通処理。
+async function hardDeleteDrug(d, btn) {
   const relatedResources = resources.filter((r) => r.drugId === d.id);
   const confirmMsg =
     `「${d.name}」と、紐づく資料${relatedResources.length}件(アップロード済みPDFも含む)を完全に削除します。\n` +
     `元に戻せません。本当によろしいですか?`;
   if (!window.confirm(confirmMsg)) return;
-  btn.disabled = true;
-  btn.textContent = '削除中…';
+  const originalLabel = btn?.textContent;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '削除中…';
+  }
   try {
     await Promise.all(relatedResources.filter((r) => r.storagePath).map((r) => deleteResourceFile(r.storagePath)));
     if (relatedResources.length > 0) await deleteResourcesBatch(relatedResources.map((r) => r.id));
     await deleteDrugsBatch([d.id]);
+    if (selectedDrugId === d.id) {
+      selectedDrugId = null;
+      document.getElementById('resultZone').classList.remove('open');
+      document.getElementById('emptyHero').style.display = 'block';
+    }
     showToast('完全に削除しました');
   } catch (err) {
     console.error('完全削除エラー:', err);
     showToast('削除に失敗しました。通信状況をご確認ください');
-    btn.disabled = false;
-    btn.textContent = '完全に削除';
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+    }
   }
+}
+
+archivedDrugsListEl.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-action="hard-delete-drug"]');
+  if (!btn) return;
+  const d = drugs.find((x) => x.id === btn.dataset.id);
+  if (!d) return;
+  hardDeleteDrug(d, btn);
+});
+
+document.getElementById('deleteDrugBtn').addEventListener('click', (e) => {
+  if (!selectedDrugId) return;
+  const d = drugs.find((x) => x.id === selectedDrugId);
+  if (!d) return;
+  hardDeleteDrug(d, e.currentTarget);
 });
 
 document.getElementById('excelExportDeletedBtn').addEventListener('click', () => {
