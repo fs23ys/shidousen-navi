@@ -139,7 +139,9 @@ main{max-width:1080px; margin:0 auto; padding:16px 28px 60px;}
 .search-box svg{flex-shrink:0; color:var(--ink-faint);}
 #drugInput{
   flex:1; border:none; outline:none; background:transparent;
-  font-size:17px; padding:12px 0; color:var(--ink);
+  /* プレースホルダー(「採用薬から検索(例:アムロジピン、ロキソプロフェン…)」)が
+     途中で切れず収まるよう、文字サイズを小さめにする */
+  font-size:13px; padding:12px 0; color:var(--ink);
   font-family:'Zen Kaku Gothic New',sans-serif; font-weight:500;
 }
 #drugInput::placeholder{color:var(--ink-faint); font-weight:400;}
