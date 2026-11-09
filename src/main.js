@@ -79,27 +79,58 @@ logoutBtn.addEventListener('click', () => {
   signOut();
 });
 
-/* ---------------- HAMBURGER MENU / DRAWER ---------------- */
-const drawer = document.getElementById('drawer');
-const drawerOverlay = document.getElementById('drawerOverlay');
+/* ---------------- HAMBURGER MENU ----------------
+   検索(左カラム)の代わりに項目一覧(menuNavPanel)を表示し、選んだ項目の詳細だけを
+   右カラム(menuView内の.menu-detailのうち1つ)いっぱいに表示する。薬を検索欄で選ぶと
+   右側にその薬の資料が出るのと同じ操作感になるよう揃えた。 */
+const leftColSearch = document.getElementById('leftColSearch');
+const menuNavPanel = document.getElementById('menuNavPanel');
+const menuView = document.getElementById('menuView');
+let currentMenuTab = 'favorites';
 
-function openDrawer() {
-  drawer.classList.add('open');
-  drawerOverlay.classList.add('open');
+function selectMenuTab(tab) {
+  currentMenuTab = tab;
+  document.querySelectorAll('.menu-nav-item').forEach((b) => b.classList.toggle('active', b.dataset.menu === tab));
+  document.querySelectorAll('.menu-detail').forEach((el) => {
+    el.style.display = el.id === `menuDetail-${tab}` ? 'block' : 'none';
+  });
+  if (tab === 'favorites') renderFavoritesList();
 }
-function closeDrawer() {
-  drawer.classList.remove('open');
-  drawerOverlay.classList.remove('open');
+function openMenuView() {
+  document.getElementById('emptyHero').style.display = 'none';
+  document.getElementById('resultZone').classList.remove('open');
+  leftColSearch.style.display = 'none';
+  menuNavPanel.style.display = 'block';
+  menuView.classList.add('open');
+  selectMenuTab(currentMenuTab);
 }
-document.getElementById('menuBtn').addEventListener('click', openDrawer);
-document.getElementById('drawerCloseBtn').addEventListener('click', closeDrawer);
-drawerOverlay.addEventListener('click', closeDrawer);
+function closeMenuView() {
+  menuView.classList.remove('open');
+  menuNavPanel.style.display = 'none';
+  leftColSearch.style.display = '';
+  if (selectedDrugId) {
+    document.getElementById('resultZone').classList.add('open');
+  } else {
+    document.getElementById('emptyHero').style.display = 'block';
+  }
+}
+document.getElementById('menuBtn').addEventListener('click', () => {
+  if (menuView.classList.contains('open')) {
+    closeMenuView();
+  } else {
+    openMenuView();
+  }
+});
+document.getElementById('menuBackBtn').addEventListener('click', closeMenuView);
+menuNavPanel.addEventListener('click', (e) => {
+  const btn = e.target.closest('.menu-nav-item');
+  if (btn) selectMenuTab(btn.dataset.menu);
+});
 
-/* ---------------- FAVORITES MODAL(薬をまたいだお気に入り一覧) ---------------- */
-const favoritesModal = document.getElementById('favoritesModal');
+/* ---------------- よく使う指導せん(薬をまたいだお気に入り一覧) ---------------- */
 const favoritesList = document.getElementById('favoritesList');
 
-function renderFavoritesModal() {
+function renderFavoritesList() {
   const favs = resources.filter((r) => r.favorite);
   if (favs.length === 0) {
     favoritesList.innerHTML = `<div class="empty-panel">お気に入りに登録された資料はまだありません。資料カードの☆から登録できます。</div>`;
@@ -135,25 +166,10 @@ function renderFavoritesModal() {
     .join('');
 }
 
-function openFavoritesModal() {
-  renderFavoritesModal();
-  favoritesModal.classList.add('open');
-}
-function closeFavoritesModal() {
-  favoritesModal.classList.remove('open');
-}
-document.getElementById('showFavoritesBtn').addEventListener('click', () => {
-  closeDrawer();
-  openFavoritesModal();
-});
-document.getElementById('favoritesCloseBtn').addEventListener('click', closeFavoritesModal);
-favoritesModal.addEventListener('click', (e) => {
-  if (e.target === favoritesModal) closeFavoritesModal();
-});
 favoritesList.addEventListener('click', (e) => {
   const btn = e.target.closest('button[data-action="goto"]');
   if (!btn) return;
-  closeFavoritesModal();
+  closeMenuView();
   selectDrug(btn.dataset.drugId);
   drugInput.focus();
 });
@@ -185,6 +201,7 @@ function startSubscriptions() {
       if (selectedDrugId) renderResources();
       renderSuggestions();
       renderArchivedDrugs();
+      if (menuView.classList.contains('open') && currentMenuTab === 'favorites') renderFavoritesList();
     }),
     subscribeSites((list) => {
       sites = list;
@@ -207,6 +224,9 @@ function stopSubscriptions() {
   selectedDrugId = null;
   document.getElementById('resultZone').classList.remove('open');
   document.getElementById('emptyHero').style.display = 'block';
+  menuView.classList.remove('open');
+  menuNavPanel.style.display = 'none';
+  leftColSearch.style.display = '';
 }
 
 /* ---------------- SEARCH / AUTOCOMPLETE ---------------- */
@@ -374,6 +394,10 @@ function renderSelection() {
   favBtn.textContent = '☆ お気に入りのみ';
   document.getElementById('emptyHero').style.display = 'none';
   document.getElementById('resultZone').classList.add('open');
+  // メニュー画面を見ている最中に薬を選んだら、そちらの内容を優先して表示する
+  menuView.classList.remove('open');
+  menuNavPanel.style.display = 'none';
+  leftColSearch.style.display = '';
   document.getElementById('selDrugName').textContent = d.name;
   document.getElementById('selDrugArchivedBadge').style.display = d.archived ? 'inline-block' : 'none';
   document.getElementById('selDrugCode').textContent = d.category || '';
@@ -1041,7 +1065,7 @@ function renderArchivedDrugs() {
     .map((d) => {
       const cnt = resources.filter((r) => r.drugId === d.id).length;
       const dateLabel = d.archivedAt ? new Date(d.archivedAt).toLocaleDateString('ja-JP') : '';
-      return `<div class="site-card">
+      return `<div class="site-card archived-drug-card">
         <div class="site-info">
           <div class="site-name">${escapeHtml(d.name)}</div>
           <div class="hint" style="margin:2px 0 0;">${escapeHtml(d.maker || '')}${d.maker ? ' ・' : ''}資料${cnt}件${dateLabel ? ' ・' + dateLabel + 'にアーカイブ' : ''}</div>

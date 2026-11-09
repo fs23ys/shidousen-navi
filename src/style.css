@@ -311,41 +311,44 @@ main{max-width:1080px; margin:0 auto; padding:16px 28px 60px;}
   text-decoration:none; display:flex; align-items:center; gap:5px;
 }
 .site-go:hover{background:var(--sage-deep);}
+/* アーカイブ済みの薬カード:件数が多くなりがちなので、.site-cardより一回り文字を小さくする */
+.archived-drug-card{padding:10px 12px;}
+.archived-drug-card .site-name{font-size:12px;}
+.archived-drug-card .hint{font-size:11px;}
 
-/* ---------------- HAMBURGER MENU / DRAWER ---------------- */
+/* ---------------- HAMBURGER MENU ---------------- */
 .hamburger-btn{
   background:none; border:none; font-size:20px; line-height:1; color:var(--ink);
   padding:6px 9px; border-radius:8px; cursor:pointer; margin-right:2px;
 }
 .hamburger-btn:hover{background:var(--paper-deep);}
-.drawer-overlay{
-  position:fixed; inset:0; background:rgba(20,30,24,0.45);
-  display:none; z-index:70;
+/* メニュー画面:検索(左カラム)の代わりに項目一覧(menuNavPanel)を表示し、選んだ項目の詳細
+   (menuView内の.menu-detailのうち1つだけ)を右カラムいっぱいに表示する。薬の検索→選択と同じ操作感。 */
+.menu-nav-list{display:flex; flex-direction:column; gap:10px;}
+/* 以前のアコーディオン(<details><summary>)のカード見た目を踏襲しつつ、押すと右側に詳細が
+   出る選択式ボタンにする(中身は展開せず、選んだ項目だけ.active+右カラムに表示) */
+.menu-nav-item{
+  display:flex; align-items:center; justify-content:space-between; gap:10px; text-align:left;
+  background:var(--card); border:1.5px solid var(--line); border-radius:var(--radius-card);
+  padding:16px 20px; font-family:'Zen Kaku Gothic New',sans-serif; font-size:14.5px; font-weight:700; color:var(--ink);
 }
-.drawer-overlay.open{display:block;}
-.drawer{
-  position:fixed; top:0; left:0; bottom:0; width:340px; max-width:88vw;
-  background:var(--paper); box-shadow:var(--shadow-pop);
-  transform:translateX(-100%); transition:transform .22s ease;
-  z-index:71; overflow-y:auto; padding:22px 20px 32px;
+.menu-nav-item::after{content:'▸'; font-size:12px; color:var(--ink-faint); flex-shrink:0; transition:transform .15s ease;}
+.menu-nav-item:hover{border-color:var(--sage);}
+.menu-nav-item.active{background:var(--sage); border-color:var(--sage); color:#fff;}
+.menu-nav-item.active::after{color:#fff; transform:rotate(90deg);}
+.menu-nav-item.active .req-badge{background:#fff; color:var(--sage-deep);}
+#menuView{display:none;}
+#menuView.open{display:block;}
+.menu-detail{display:none;}
+.menu-back-btn{
+  background:var(--card); border:1.5px solid var(--line-strong);
+  border-radius:99px; padding:8px 16px; font-size:13px; font-weight:600; color:var(--ink-soft);
 }
-.drawer.open{transform:translateX(0);}
-.drawer-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;}
-.drawer-head h3{font-size:16px; font-weight:800; margin:0;}
-.drawer-close{background:none; border:none; font-size:18px; color:var(--ink-faint); cursor:pointer; padding:4px 8px;}
-.drawer-close:hover{color:var(--ink);}
+.menu-back-btn:hover{border-color:var(--sage); color:var(--sage-deep);}
 .backup-row{display:flex; gap:10px; flex-wrap:wrap;}
 .manage-box{background:var(--card); border:1.5px solid var(--line); border-radius:var(--radius-card); padding:20px;}
-.manage-box h3{font-family:'Zen Kaku Gothic New',sans-serif; font-size:14.5px; margin:0 0 4px; font-weight:700;}
-.manage-box p.hint{font-size:12px; color:var(--ink-faint); margin:0 0 16px;}
-.manage-box summary{
-  font-family:'Zen Kaku Gothic New',sans-serif; font-size:14.5px; font-weight:700;
-  cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between;
-}
-.manage-box summary::-webkit-details-marker{display:none;}
-.manage-box summary::after{content:'▾'; font-size:12px; color:var(--ink-faint); transition:transform .15s ease; margin-left:8px;}
-.manage-box[open] summary::after{transform:rotate(180deg);}
-.manage-box[open] summary{margin-bottom:12px;}
+.manage-box h3{font-family:'Zen Kaku Gothic New',sans-serif; font-size:17px; margin:0 0 10px; font-weight:800;}
+.manage-box p.hint{font-size:12.5px; color:var(--ink-faint); margin:0 0 16px; line-height:1.7;}
 .manage-box p.hint:last-child{margin-bottom:0;}
 .dropzone{
   border:2px dashed var(--line-strong); border-radius:var(--radius-sm);

@@ -99,58 +99,10 @@
   </div>
 </header>
 
-<div class="drawer-overlay" id="drawerOverlay"></div>
-<aside class="drawer" id="drawer">
-  <div class="drawer-head">
-    <h3 class="display">メニュー</h3>
-    <button class="drawer-close" id="drawerCloseBtn" aria-label="閉じる">✕</button>
-  </div>
-
-  <details class="manage-box" style="margin-bottom:18px;">
-    <summary>よく使う指導せん</summary>
-    <p class="hint">☆でお気に入りに登録した資料を、薬をまたいでまとめて確認できます。</p>
-    <button class="import-file-btn" id="showFavoritesBtn">★ お気に入り一覧を見る</button>
-  </details>
-
-  <details class="manage-box" style="margin-bottom:18px;">
-    <summary>採用医薬品リストの取込</summary>
-    <p class="hint">Excel(.xlsx)を選ぶと、薬剤名・YJコード・分類・メーカー名・資料URLなどを読み取って一括登録します。<strong>採用医薬品リストは今のExcelの内容に合わせて更新されます</strong>が、ファイルにない薬は削除せず「アーカイブ」として一覧から隠すだけにします(資料・アップロード済みPDFもそのまま残ります)。再度Excelに載れば自動で元に戻り、完全に削除したい場合はメニューの「アーカイブ済みの薬」から手動で行えます。なお、薬自体は残るのに一部の資料だけがファイルからなくなった場合、その資料は削除されます(アップロード済みPDFは対象外)。</p>
-    <div class="dropzone">
-      <strong>ファイルを選択してください</strong>
-      クリックしてExcelファイルを選ぶと、列の対応を確認する画面が開きます
-      <div>
-        <label class="import-file-btn" style="cursor:pointer;">
-          Excelを選択
-          <input type="file" id="excelFileInput" accept=".xlsx,.xls" style="display:none;">
-        </label>
-      </div>
-    </div>
-    <p class="hint" style="margin-top:12px;">現在の登録件数:<span class="mono" id="drugManageCount"></span>件</p>
-  </details>
-
-  <details class="manage-box" style="margin-bottom:18px;">
-    <summary>アーカイブ済みの薬<span class="req-badge" id="archivedDrugCount" style="margin-left:6px;">0</span></summary>
-    <p class="hint">Excel再取込で一覧になくなった薬はここに入ります。削除ではないので、資料・アップロード済みPDFはそのまま残っており、検索などの通常画面には出てきません。再度Excelに載れば自動で元に戻ります。<strong>販売中止などで今後絶対に採用しないと分かっている薬だけ</strong>、完全に削除してください(資料・PDFも含めて元に戻せません)。</p>
-    <div id="archivedDrugsList"></div>
-  </details>
-
-  <details class="manage-box">
-    <summary>データのバックアップ</summary>
-    <p class="hint">登録した薬剤・資料データをファイルに書き出したり、別の端末で読み込んだりできます。</p>
-    <div class="backup-row">
-      <button class="import-file-btn" id="exportDataBtn">📤 JSONで書き出す</button>
-      <label class="import-file-btn" style="cursor:pointer;">
-        📥 JSONを読み込む
-        <input type="file" id="importFileInput" accept="application/json" style="display:none;">
-      </label>
-    </div>
-    <p class="hint" style="margin-top:12px;">読み込んだデータは、今の登録内容に追加(マージ)されます。同じ薬(YJコード一致)・同じ資料・同じサイト(ドメイン一致)は重複登録されません。</p>
-  </details>
-</aside>
-
 <main class="layout">
-  <!-- 左カラム:検索 + 検索結果リスト(常時表示) + サイトでさがす -->
+  <!-- 左カラム:検索 + 検索結果リスト(常時表示) + サイトでさがす。メニュー表示中はmenuNavPanelに差し替わる -->
   <aside class="left-col">
+    <div id="leftColSearch">
     <div class="search-zone">
       <span class="search-label">医薬品名で検索</span>
       <div class="search-box">
@@ -178,6 +130,21 @@
       <div class="panel-title">サイトでさがす <span class="n" id="siteCount">0</span></div>
     </div>
     <div id="siteList"></div>
+    </div>
+
+    <!-- メニュー表示中は検索の代わりにこちらを表示する:選んだ項目の詳細は右カラム(menuView)に出る -->
+    <div id="menuNavPanel" style="display:none;">
+      <div class="panel-head">
+        <div class="panel-title">メニュー</div>
+      </div>
+      <div class="menu-nav-list">
+        <button class="menu-nav-item" type="button" data-menu="favorites">★ よく使う指導せん</button>
+        <button class="menu-nav-item" type="button" data-menu="excelImport">📥 採用医薬品リストの取込</button>
+        <button class="menu-nav-item" type="button" data-menu="archived">🗄️ アーカイブ済みの薬<span class="req-badge" id="archivedDrugCount" style="margin-left:6px;">0</span></button>
+        <button class="menu-nav-item" type="button" data-menu="backup">💾 データのバックアップ</button>
+      </div>
+      <button class="menu-back-btn" id="menuBackBtn" style="margin-top:18px; width:100%;">← 検索に戻る</button>
+    </div>
   </aside>
 
   <!-- 右カラム:選択中の医薬品 + 登録済み資料(メインエリア) -->
@@ -196,8 +163,8 @@
           <span id="selDrugArchivedBadge" class="aud-chip" style="display:none;--aud-color:#B05C5C;--aud-tint:#F6DEDE;">🗄️ アーカイブ済み(取扱終了・採用医薬品リストには出てきません)</span>
           <div class="code mono" id="selDrugCode">—</div>
           <div class="code-list mono" id="selDrugCodes"></div>
-          <button class="btn-danger-outline" id="deleteDrugBtn" style="margin-top:12px;" title="この薬と紐づく資料・アップロード済みPDFをすべて完全に削除します(販売中止など、今後絶対に採用しない薬専用)">🗑 この薬を完全に削除</button>
         </div>
+        <button class="btn-danger-outline" id="deleteDrugBtn" style="align-self:center;" title="この薬と紐づく資料・アップロード済みPDFをすべて完全に削除します(販売中止など、今後絶対に採用しない薬専用)">🗑 この薬を完全に削除</button>
       </div>
 
       <div class="drug-note" id="drugNote" style="display:none;"></div>
@@ -214,6 +181,51 @@
         <button id="favOnlyBtn" style="margin-left:auto;">☆ お気に入りのみ</button>
       </div>
       <div id="resList"></div>
+    </div>
+
+    <!-- メニュー画面:ハンバーガーメニューを押すと、上の内容の代わりにここが表示される。
+         左のmenuNavPanelで選んだ項目に応じて、このうち1つだけを表示する -->
+    <div id="menuView">
+      <div class="menu-detail manage-box" id="menuDetail-favorites">
+        <h3 class="display">よく使う指導せん</h3>
+        <p class="hint">☆でお気に入りに登録した資料を、薬をまたいでまとめて確認できます。</p>
+        <div id="favoritesList"></div>
+      </div>
+
+      <div class="menu-detail manage-box" id="menuDetail-excelImport" style="display:none;">
+        <h3 class="display">採用医薬品リストの取込</h3>
+        <p class="hint">Excel(.xlsx)を選ぶと、薬剤名・YJコード・分類・メーカー名・資料URLなどを読み取って一括登録します。<strong>採用医薬品リストは今のExcelの内容に合わせて更新されます</strong>が、ファイルにない薬は削除せず「アーカイブ」として一覧から隠すだけにします(資料・アップロード済みPDFもそのまま残ります)。再度Excelに載れば自動で元に戻り、完全に削除したい場合はメニューの「アーカイブ済みの薬」から手動で行えます。なお、薬自体は残るのに一部の資料だけがファイルからなくなった場合、その資料は削除されます(アップロード済みPDFは対象外)。</p>
+        <div class="dropzone">
+          <strong>ファイルを選択してください</strong>
+          クリックしてExcelファイルを選ぶと、列の対応を確認する画面が開きます
+          <div>
+            <label class="import-file-btn" style="cursor:pointer;">
+              Excelを選択
+              <input type="file" id="excelFileInput" accept=".xlsx,.xls" style="display:none;">
+            </label>
+          </div>
+        </div>
+        <p class="hint" style="margin-top:12px;">現在の登録件数:<span class="mono" id="drugManageCount"></span>件</p>
+      </div>
+
+      <div class="menu-detail manage-box" id="menuDetail-archived" style="display:none;">
+        <h3 class="display">アーカイブ済みの薬</h3>
+        <p class="hint">Excel再取込で一覧になくなった薬はここに入ります。削除ではないので、資料・アップロード済みPDFはそのまま残っており、検索などの通常画面には出てきません。再度Excelに載れば自動で元に戻ります。<strong>販売中止などで今後絶対に採用しないと分かっている薬だけ</strong>、完全に削除してください(資料・PDFも含めて元に戻せません)。</p>
+        <div id="archivedDrugsList"></div>
+      </div>
+
+      <div class="menu-detail manage-box" id="menuDetail-backup" style="display:none;">
+        <h3 class="display">データのバックアップ</h3>
+        <p class="hint">登録した薬剤・資料データをファイルに書き出したり、別の端末で読み込んだりできます。</p>
+        <div class="backup-row">
+          <button class="import-file-btn" id="exportDataBtn">📤 JSONで書き出す</button>
+          <label class="import-file-btn" style="cursor:pointer;">
+            📥 JSONを読み込む
+            <input type="file" id="importFileInput" accept="application/json" style="display:none;">
+          </label>
+        </div>
+        <p class="hint" style="margin-top:12px;">読み込んだデータは、今の登録内容に追加(マージ)されます。同じ薬(YJコード一致)・同じ資料・同じサイト(ドメイン一致)は重複登録されません。</p>
+      </div>
     </div>
   </section>
 </main>
@@ -318,17 +330,6 @@
       </div>
       <p class="import-summary" id="excelSummary"></p>
     </div>
-  </div>
-</div>
-
-<!-- FAVORITES MODAL(お気に入り一覧) -->
-<div class="modal-overlay" id="favoritesModal">
-  <div class="modal modal-wide" style="max-width:640px;">
-    <div class="modal-head" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:12px;">
-      <h3 class="display" style="margin:0;">★ お気に入り一覧</h3>
-      <button class="drawer-close" id="favoritesCloseBtn" aria-label="閉じる">✕</button>
-    </div>
-    <div style="padding:0 24px 24px; max-height:70vh; overflow-y:auto;" id="favoritesList"></div>
   </div>
 </div>
 
